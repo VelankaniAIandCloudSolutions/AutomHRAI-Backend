@@ -4,6 +4,8 @@ from accounts.models import BaseModel
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
+
+
 class Resume(BaseModel):
     resume_file_path = models.FileField(upload_to='resumes/')
     name = models.CharField(max_length=100,null =True, blank=True)
@@ -18,11 +20,11 @@ class Resume(BaseModel):
     total_experience = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return self.name or str(self.id)
 
 @receiver(post_delete, sender=Resume)
 def submission_delete(sender, instance, **kwargs):
-    instance.resume.delete(False)
+    instance.resume_file_path.delete(False)
 
 
 class Candidate(BaseModel):
@@ -34,3 +36,6 @@ class Candidate(BaseModel):
 
     def __str__(self):
         return self.first_name
+    
+
+        
