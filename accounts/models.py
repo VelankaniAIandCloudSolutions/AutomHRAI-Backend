@@ -44,6 +44,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         to_field='id'
     )
     company = models.ForeignKey(Company,related_name='user_accounts',on_delete=models.CASCADE, null=True, blank=True)
+    user_image  = models.FileField(upload_to='user_images/', null=True, blank=True)
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
