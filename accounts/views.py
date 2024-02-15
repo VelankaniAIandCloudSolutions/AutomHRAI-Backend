@@ -6,16 +6,35 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.shortcuts import get_object_or_404
 from .serializers import UserAccountSerializer, UserCreateSerializer
-from .models import UserAccount
+from .models import UserAccount , Company
 
 
 @api_view(['GET'])
 @permission_classes([])
 def get_all_users(request):
     users = UserAccount.objects.all()
-    serializer = UserAccountSerializer(users, many=True)
-    return Response(serializer.data)
+    
+    user_list = []
+    for user in users:
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'emp_id':user.emp_id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone_number': user.phone_number,
+            'is_active': user.is_active,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser,
+            'updated_at': user.updated_at,
+            'created_at': user.created_at,
+            'updated_by': user.updated_by_id,
+            'company_id': user.company_id,
+            'user_image': user.user_image.url if user.user_image else None,
+        }
+        user_list.append(user_data)
 
+    return Response(user_list)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
@@ -28,31 +47,110 @@ def get_authenticated_user(request):
 @api_view(['GET'])
 @permission_classes([])
 def get_user_by_id(request, user_id):
-    user = get_object_or_404(UserAccount, id=user_id)
-    serializer = UserAccountSerializer(user)
-    return Response(serializer.data)
+    user = UserAccount.objects.get(id=user_id)
+
+    user_data = {
+        'id': user.id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone_number': user.phone_number,
+        'is_active': user.is_active,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+        'updated_at': user.updated_at,
+        'created_at': user.created_at,
+        'updated_by': user.updated_by_id,
+        'company_id': user.company_id,
+        'user_image': user.user_image.url if user.user_image else None,
+        'emp_id': user.emp_id,
+    }
+
+    return Response(user_data)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_user(request):
-    serializer = UserCreateSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        data = request.data
+
+        email = data.get('email')
+        password = data.get('password')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        phone_number = data.get('phone_number')
+        is_active = data.get('is_active', True)
+        is_staff = data.get('is_staff', False)
+        is_superuser = data.get('is_superuser', False)
+        company_id = data.get('company_id') 
+        user_image = request.FILES.get('user_image')
+        emp_id = data.get('emp_id')
+        company = None
+        if company_id:
+            try:
+                company = Company.objects.get(id=company_id)
+            except Company.DoesNotExist:
+                return Response({'error': 'Invalid company_id'}, status=400)
+
+        user = UserAccount.objects.create_user(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=phone_number,
+            emp_id=emp_id,
+            is_active=is_active,
+            is_staff=is_staff,
+            is_superuser=is_superuser,
+            company=company,
+            user_image=user_image,
+            
+
+        )
+
+        return Response({'message': 'UserAccount created successfully', 'user_id': user.id})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def update_user(request, user_id):
-    user = get_object_or_404(UserAccount, id=user_id)
-    serializer = UserAccountSerializer(user, data=request.data, partial=True)
+    try:
+        data = request.data
+        try:
+            user = UserAccount.objects.get(id=user_id)
+        except UserAccount.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
+        user.email = data.get('email', user.email)
+        user.password = data.get('password', user.password) 
+        user.first_name = data.get('first_name', user.first_name)
+        user.last_name = data.get('last_name', user.last_name)
+        user.phone_number = data.get('phone_number', user.phone_number)
+        user.emp_id = data.get('emp_id', user.emp_id)
+        user.is_active = data.get('is_active', user.is_active)
+        user.is_staff = data.get('is_staff', user.is_staff)
+        user.is_superuser = data.get('is_superuser', user.is_superuser)
+        
+        company_id = data.get('company_id') 
+        if company_id:
+            try:
+                company = Company.objects.get(id=company_id)
+                user.company = company
+            except Company.DoesNotExist:
+                return Response({'error': 'Invalid company_id'}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        user_image = request.FILES.get('user_image')
+        if user_image:
+            user.user_image = user_image
+
+        user.save()
+
+        return Response({'message': 'UserAccount updated successfully', 'user_id': user.id})
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['DELETE'])
