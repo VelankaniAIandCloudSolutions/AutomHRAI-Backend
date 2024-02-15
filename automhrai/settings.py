@@ -172,3 +172,5 @@ AUTH_TOKEN_MODEL = 'authtoken.Token'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
+
+WEBSITE_URL = 'http://localhost:8000'

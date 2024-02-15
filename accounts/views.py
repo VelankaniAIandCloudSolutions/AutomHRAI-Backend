@@ -13,28 +13,10 @@ from .models import UserAccount , Company
 @permission_classes([])
 def get_all_users(request):
     users = UserAccount.objects.all()
-    
-    user_list = []
-    for user in users:
-        user_data = {
-            'id': user.id,
-            'email': user.email,
-            'emp_id':user.emp_id,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'phone_number': user.phone_number,
-            'is_active': user.is_active,
-            'is_staff': user.is_staff,
-            'is_superuser': user.is_superuser,
-            'updated_at': user.updated_at,
-            'created_at': user.created_at,
-            'updated_by': user.updated_by_id,
-            'company_id': user.company_id,
-            'user_image': user.user_image.url if user.user_image else None,
-        }
-        user_list.append(user_data)
-
-    return Response(user_list)
+    users_serializer = UserAccountSerializer(users, many=True)
+    return Response({
+        'users': users_serializer.data,
+    })
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
@@ -48,25 +30,11 @@ def get_authenticated_user(request):
 @permission_classes([])
 def get_user_by_id(request, user_id):
     user = UserAccount.objects.get(id=user_id)
+    user_serializer = UserAccountSerializer(user)
 
-    user_data = {
-        'id': user.id,
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'phone_number': user.phone_number,
-        'is_active': user.is_active,
-        'is_staff': user.is_staff,
-        'is_superuser': user.is_superuser,
-        'updated_at': user.updated_at,
-        'created_at': user.created_at,
-        'updated_by': user.updated_by_id,
-        'company_id': user.company_id,
-        'user_image': user.user_image.url if user.user_image else None,
-        'emp_id': user.emp_id,
-    }
-
-    return Response(user_data)
+    return Response({
+        'user': user_serializer.data,
+    })
 
 
 @api_view(['POST'])
@@ -74,7 +42,6 @@ def get_user_by_id(request, user_id):
 def create_user(request):
     try:
         data = request.data
-
         email = data.get('email')
         password = data.get('password')
         first_name = data.get('first_name')
@@ -105,8 +72,6 @@ def create_user(request):
             is_superuser=is_superuser,
             company=company,
             user_image=user_image,
-            
-
         )
 
         return Response({'message': 'UserAccount created successfully', 'user_id': user.id})
