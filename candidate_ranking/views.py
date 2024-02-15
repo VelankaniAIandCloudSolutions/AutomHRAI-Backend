@@ -28,6 +28,7 @@ def create_job_group(request , department_id):
             'id': job_group.id,
             'name': job_group.name,
             'department_id': job_group.department.id if job_group.department else None,
+            'isActive': True
         }
     }
 
@@ -59,6 +60,7 @@ def update_job_group(request, job_group_id):
             'id': job_group.id,
             'name': job_group.name,
             'department_id': job_group.department.id if job_group.department else None,
+            'isActive' : True
         }
     }
 
@@ -130,3 +132,34 @@ def delete_job(request, job_id):
     job.delete()
 
     return Response({'message': 'Job deleted successfully'})
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def department_list(request):
+    departments = Department.objects.all()
+    department_list = []
+
+    for department in departments:
+        department_list.append({
+            'id': department.id,
+            'name': department.name,
+            'company': department.company.name if department.company else None,
+        })
+
+    return Response(department_list)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def jobgroup_list(request):
+    job_groups = JobGroup.objects.all()
+    job_group_list = []
+    
+    for job_group in job_groups:
+        job_group_list.append({
+            'id': job_group.id,
+            'name': job_group.name,
+            'department_id': job_group.department.id if job_group.department else None,
+            'department_name': job_group.department.name if job_group.department else None,
+            'isActive': True
+        })
+    return Response(job_group_list)
