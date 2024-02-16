@@ -84,6 +84,20 @@ def create_user(request):
 def update_user(request, user_id):
     try:
         data = request.data
+
+        print(data.get('is_active'))
+        if(data.get('is_active') == 'true'):
+            is_active = True
+        else:
+            is_active = False
+        if(data.get('is_staff') == 'true'):
+            is_staff = True
+        else:
+            is_staff = False
+        if(data.get('is_superuser') == 'true'):
+            is_superuser = True
+        else:
+            is_superuser = False    
         try:
             user = UserAccount.objects.get(id=user_id)
         except UserAccount.DoesNotExist:
@@ -95,9 +109,9 @@ def update_user(request, user_id):
         user.last_name = data.get('last_name', user.last_name)
         user.phone_number = data.get('phone_number', user.phone_number)
         user.emp_id = data.get('emp_id', user.emp_id)
-        user.is_active = data.get('is_active', user.is_active)
-        user.is_staff = data.get('is_staff', user.is_staff)
-        user.is_superuser = data.get('is_superuser', user.is_superuser)
+        user.is_active = is_active
+        user.is_staff = is_staff
+        user.is_superuser = is_superuser
         
         company_id = data.get('company_id') 
         if company_id:
