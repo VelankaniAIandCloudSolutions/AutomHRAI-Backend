@@ -11,10 +11,6 @@ urlpatterns = [
     path('create_job/<int:job_group_id>/', views.create_job,name='create_job'),
     path('update_job/<int:job_id>/', views.update_job, name='update_job'),
     path('delete_job/<int:job_id>/',views.delete_job,name='delete_job'),
+    path('rank_candidates/<int:job_id>/',views.rank_candidates,name='rank_candidates'),
     
 ]
-
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
