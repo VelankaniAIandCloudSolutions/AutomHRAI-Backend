@@ -42,14 +42,26 @@ def get_user_by_id(request, user_id):
 def create_user(request):
     try:
         data = request.data
+        if(data.get('is_active') == 'true'):
+            is_active = True
+        else:
+            is_active = False
+        if(data.get('is_staff') == 'true'):
+            is_staff = True
+        else:
+            is_staff = False
+        if(data.get('is_superuser') == 'true'):
+            is_superuser = True
+        else:
+            is_superuser = False  
         email = data.get('email')
         password = data.get('password')
         first_name = data.get('first_name')
         last_name = data.get('last_name')
         phone_number = data.get('phone_number')
-        is_active = data.get('is_active', True)
-        is_staff = data.get('is_staff', False)
-        is_superuser = data.get('is_superuser', False)
+        is_active = is_active
+        is_staff = is_staff
+        is_superuser = is_superuser
         company_id = data.get('company_id') 
         user_image = request.FILES.get('user_image')
         emp_id = data.get('emp_id')
