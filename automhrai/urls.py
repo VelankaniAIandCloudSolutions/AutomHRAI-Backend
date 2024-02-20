@@ -21,6 +21,6 @@ urlpatterns = [
     path('api/v1/', include('djoser.urls.authtoken')),
     path('api/v1/accounts/', include('accounts.urls')),
     path('api/v1/candidate-ranking/', include('candidate_ranking.urls')),
-    # path('api/v1/facial-recognition/', include('facial_recognition.urls')),
+    path('api/v1/facial-recognition/', include('facial_recognition.urls')),
     path('api/v1/resume-parser/', include('resume_parser.urls')),
 ]
