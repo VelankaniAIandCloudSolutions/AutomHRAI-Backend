@@ -3,6 +3,7 @@ from accounts.models import BaseModel
 
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from candidate_ranking.models import Job
 
 
 
@@ -30,12 +31,12 @@ def submission_delete(sender, instance, **kwargs):
 class Candidate(BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255,null=True,blank=True)
-    email = models.EmailField(max_length=255,unique=True)
+    email = models.EmailField(max_length=255,null=True, blank=True)
     phone_number = models.CharField(max_length=13,null=True,blank=True)
     resume = models.ForeignKey(Resume,related_name='candidates',on_delete=models.SET_NULL,null=True,blank=True)
+    job = models.ForeignKey(Job,related_name='job',on_delete=models.SET_NULL,null=True,blank=True)
 
-    def __str__(self):
-        return self.first_name
+
     
 
         

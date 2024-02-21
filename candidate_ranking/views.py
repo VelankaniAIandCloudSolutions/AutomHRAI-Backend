@@ -84,23 +84,25 @@ def delete_job_group(request, job_group_id):
 def create_job(request, job_group_id):
     name = request.data.get('name')
     job_description = request.data.get('job_description')
+    department_name = request.data.get('department')
     attachment = request.data.get('attachment')
 
     try:
-        job_group = JobGroup.objects.get(id=job_group_id)
+        job_group = JobGroup.objects.get(pk=job_group_id)
     except JobGroup.DoesNotExist:
         return Response({'error': 'Invalid job_group ID'}, status=400)
     
-    # if 'attachment' in request.FILES:
-    #     attachment_file = request.FILES['attachment']
-    # else:
-    #     attachment_file = None
+    try:
+        department = Department.objects.get(name=department_name)
+    except Department.DoesNotExist:
+        return Response({'error': 'Invalid department name'}, status=400)
 
     job = Job.objects.create(
         name=name,
         job_group=job_group,
         job_description=job_description,
-        attachment=attachment
+        attachment=attachment,
+        department=department,
     )
 
     return Response({'message': 'Job created successfully', }, status=201)
@@ -113,10 +115,12 @@ def update_job(request, job_id):
         job = Job.objects.get(id=job_id)
     except Job.DoesNotExist:
         return Response({'error': 'Invalid job ID'}, status=400)
+   
 
     job.name = request.data.get('name', job.name)
     job.job_description = request.data.get('job_description', job.job_description)
     job.attachment = request.data.get('attachment', job.attachment)
+    job.department = request.data.get('department', job.department)
     job.save()
 
     return Response({'message': 'Job updated successfully'})
@@ -163,3 +167,22 @@ def jobgroup_list(request):
             'isActive': True
         })
     return Response(job_group_list)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_jobs(request):
+    jobs = Job.objects.all()
+    job_list = []
+
+    for job in jobs:
+        job_list.append({
+            'id': job.id,
+            'name': job.name,
+            'job_group': job.job_group.name if job.job_group else None,
+            'job_description': job.job_description,
+            'department': job.department.name if job.department else None,
+            'attachment': str(job.attachment) if job.attachment else None,
+        })
+
+    return Response(job_list)

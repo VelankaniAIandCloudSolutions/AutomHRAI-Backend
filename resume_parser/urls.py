@@ -11,7 +11,7 @@ urlpatterns = [
     path('download_resume/<int:resume_id>/', views.download_resume, name='downlaod_resume'),
     path('update_resume/<int:resume_id>/',views.update_resume, name='update_resume'),
     path('delete_resume/<int:resume_id>/', views.delete_resume , name='delete_resume'),
-    path('create_candidate/<int:resume_id>/', views.create_candidate, name='create_candidate'),
+    path('create_candidate/<int:resume_id>/<int:job_id>/', views.create_candidate, name='create_candidate'),
     path('update_candidate/<int:candidate_id>/', views.update_candidate, name='update_candidate'),
     path('delete_candidate/<int:candidate_id>/', views.delete_candidate, name='delete_candidate')
    

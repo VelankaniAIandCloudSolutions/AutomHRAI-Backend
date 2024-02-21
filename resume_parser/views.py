@@ -11,6 +11,7 @@ from django.conf import settings
 from django.db import IntegrityError
 from .models import Resume, Candidate
 from .serializers import ResumeSerializer, CandidateSerializer
+from candidate_ranking.models import Job
 from pyresparser import ResumeParser
 import os
 
@@ -186,25 +187,33 @@ def delete_resume(request, resume_id):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def create_candidate(request, resume_id, job_id):
+    try:
+        resume = Resume.objects.get(pk=resume_id)
 
-def create_candidate(request, resume_id):
-    resume = Resume.objects.get(pk=resume_id)
-    
-    name_parts = resume.name.split()
-    first_name = name_parts[0] if name_parts else ''
-    last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
-    
-    
-    Candidate.objects.create(
-        first_name=first_name,
-        last_name=last_name,
-        email=resume.email,
-        phone_number=resume.mobile_number,
-        resume=resume
-    )
+        name_parts = resume.name.split()
+        first_name = name_parts[0] if name_parts else ''
+        last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
 
-    return Response({'message': 'Candidate created successfully'}, status=status.HTTP_201_CREATED)
+        job = Job.objects.get(pk=job_id)
+        
+        Candidate.objects.create(
+            first_name=first_name,
+            last_name=last_name,
+            email=resume.email,
+            phone_number=resume.mobile_number,
+            resume=resume,
+            job=job
+        )
 
+        return Response({'message': 'Candidate created successfully'}, status=status.HTTP_201_CREATED)
+
+    except Resume.DoesNotExist:
+        return Response({'error': 'Resume not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 
