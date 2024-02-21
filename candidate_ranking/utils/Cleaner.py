@@ -1,5 +1,5 @@
 import spacy
-import Distill
+import candidate_ranking.utils.Distill as Distill
 
 try:
     nlp = spacy.load('en_core_web_sm')

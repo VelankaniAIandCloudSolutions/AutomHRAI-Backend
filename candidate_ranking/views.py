@@ -12,14 +12,12 @@ from resume_parser.models import Resume
 
 from operator import index
 from pandas._config.config import options
-import Cleaner 
+import candidate_ranking.utils.Cleaner as Cleaner
+import candidate_ranking.utils.tf_idf as tf_idf
+import candidate_ranking.utils.Similar as Similar
 import textract as tx
 import pandas as pd
 import os
-import tf_idf
-import nltk
-nltk.download('punkt')
-import Similar
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -142,22 +140,16 @@ def delete_job(request, job_id):
 
     return Response({'message': 'Job deleted successfully'})
 
-
-
-
-
-
-def read_resumes(list_of_resumes, resume_directory):
+def read_resumes(list_of_resumes):
     placeholder = []
     for res in list_of_resumes:
         temp = []
-        temp.append(res)
-        text = tx.process(resume_directory+res, encoding='ascii')
+        temp.append(str(res.name)) 
+        text = tx.process(res.resume_file_path.path, encoding='ascii')
         text = str(text, 'utf-8')
         temp.append(text)
         placeholder.append(temp)
     return placeholder
-
 
 def get_cleaned_words(document):
     for i in range(len(document)):
@@ -179,8 +171,8 @@ def create_single_job_document(single_job_description):
     job_doc.append(temp)
     return job_doc
 
-
 def calculate_scores(resumes, job_description):
+    index = 0
     scores = []
     for x in range(resumes.shape[0]):
         score = Similar.match(
@@ -189,46 +181,44 @@ def calculate_scores(resumes, job_description):
     return scores
 
 
-
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def rank_candidates(request, job_id):
     try:
-        job = Job.objects.get(id=job_id)
+        job = Job.objects.get(pk=job_id)
     except Job.DoesNotExist:
         return Response({'error': 'Invalid job ID'}, status=400)
 
-    single_job_description = [job.name, job.job_description]
-    single_job_document = create_single_job_document(single_job_description)
-    Jd = get_cleaned_words(single_job_document)
+    try:
+        single_job_description = [job.name, job.job_description]
+        single_job_document = create_single_job_document(single_job_description)
+        Jd = get_cleaned_words(single_job_document)
 
-    jd_database = pd.DataFrame(Jd, columns=["Name", "Context", "Cleaned", "Selective", "Selective_Reduced", "TF_Based"])
+        jd_database = pd.DataFrame(Jd, columns=["Name", "Context", "Cleaned", "Selective", "Selective_Reduced", "TF_Based"])
 
-    # jd_database.to_csv("Job_Data.csv", index=False)
+        resumes = Resume.objects.filter(candidates__job=job)
+        document = read_resumes(resumes)
+        Doc = get_cleaned_words(document)
+        resume_database = pd.DataFrame(Doc, columns=["Name", "Context", "Cleaned", "Selective", "Selective_Reduced", "TF_Based"])
 
-    resumes  = Resume.objects.filter(candidates__job=job)
-    document = []
-    resume_file_paths = [resume.resume_file_path.path for resume in resumes]
+        resume_database['Scores'] = calculate_scores(resume_database, jd_database)
 
-    document = read_resumes(resume_file_paths)
+        Ranked_resumes = resume_database.sort_values(by=['Scores'], ascending=False).reset_index(drop=True)
 
-    Doc = get_cleaned_words(document)
+        Ranked_resumes['Rank'] = pd.DataFrame([i for i in range(1, len(Ranked_resumes['Scores']) + 1)])
 
-    resume_database = pd.DataFrame(Doc, columns=[
-        "Name", "Context", "Cleaned", "Selective", "Selective_Reduced", "TF_Based"])
+        ranked_resumes_data = []
+        for i, row in Ranked_resumes.iterrows():
+            resume_info = {
+                'id': resumes[i].id, 
+                'name': row['Name'],
+                'email': resumes[i].email, 
+                'scores': row['Scores'],
+                'rank': row['Rank']
+            }
+            ranked_resumes_data.append(resume_info)
 
-    # Database.to_csv("Resume_Data.csv", index=False)
-
-
-    resume_database['Scores'] = calculate_scores(resume_database, jd_database)
-
-    Ranked_resumes = resume_database.sort_values(
-        by=['Scores'], ascending=False).reset_index(drop=True)
-
-    Ranked_resumes['Rank'] = pd.DataFrame(
-        [i for i in range(1, len(Ranked_resumes['Scores'])+1)])
-
-    print(Ranked_resumes)
-
-    return Response({'message': 'Candidates ranked'})
+        return Response({'message': 'Candidates ranked', 'ranked_resumes': ranked_resumes_data})
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
