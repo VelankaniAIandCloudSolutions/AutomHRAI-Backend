@@ -1,8 +1,6 @@
 from django.db import models
 from accounts.models import BaseModel , UserAccount
 
-# Create your models here.
-
 class CheckInAndOut(BaseModel):
 
     CHECK_CHOICES = [

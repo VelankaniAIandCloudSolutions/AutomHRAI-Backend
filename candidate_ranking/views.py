@@ -190,7 +190,7 @@ def get_jobs(request):
             'name': job.name,
             'job_group': job.job_group.name if job.job_group else None,
             'job_description': job.job_description,
-            'department': job.department.name if job.department else None,
+            'department': job.job_group.department.name if job.job_group.department else None,
             'attachment': str(job.attachment) if job.attachment else None,
         })
 
