@@ -1,7 +1,11 @@
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.http import HttpResponse
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import status
+from django.http import FileResponse
+
 
 from django.conf import settings
 from django.db import IntegrityError
@@ -61,6 +65,28 @@ def file_upload_view(request):
         response_data.append({'file_name': file.name, 'saved_path': saved_path, 'status': 'File saved successfully', 'parsed_data': resume_serializer.data})
 
     return Response({'message': 'Files uploaded successfully', 'resumes': response_data}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def download_resume(request, resume_id):
+    try:
+        resume = Resume.objects.get(pk=resume_id)
+    except ObjectDoesNotExist:
+        return Response({'message': 'Resume not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if resume.resume_file_path:
+        try:
+            file_path = resume.resume_file_path.path
+            with open(file_path, 'rb') as resume_file:
+                response = FileResponse(resume_file)
+                response['Content-Disposition'] = f'attachment; filename="{resume.resume_file_path.name}"'
+            return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        raise HttpResponse("Resume file not found or not provided")
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

@@ -8,6 +8,7 @@ urlpatterns = [
     path('file_upload_view/', views.file_upload_view, name='file_upload_view'),
     path('get_resumes/',views.get_resumes, name='get_resumes' ),
     path('update_multiple_resumes/',views.update_multiple_resumes,name='update_multiple_resumes'),
+    path('download_resume/<int:resume_id>/', views.download_resume, name='downlaod_resume'),
     path('update_resume/<int:resume_id>/',views.update_resume, name='update_resume'),
     path('delete_resume/<int:resume_id>/', views.delete_resume , name='delete_resume'),
     path('create_candidate/<int:resume_id>/', views.create_candidate, name='create_candidate'),
