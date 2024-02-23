@@ -26,6 +26,12 @@ class BreakInAndOutSerializer(serializers.ModelSerializer):
         model = BreakInAndOut
         fields = '__all__'
 
+    def get_image(self,obj):
+        if(obj.image):
+            return settings.WEBSITE_URL + '/media/' + str(obj.image)
+        else:
+            return ''
+
 class TimeSheetSerializer(serializers.ModelSerializer):
     user = UserAccountSerializer()
    

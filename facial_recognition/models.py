@@ -29,6 +29,7 @@ class TimeSheet(BaseModel):
     user = models.ForeignKey(UserAccount , related_name='timesheets' , on_delete=models.CASCADE)
     date = models.DateField(blank = True , null = True)
     working_time = models.DurationField( blank = True , null = True)
+    break_time = models.DurationField(blank = True , null = True)
 
 
 
