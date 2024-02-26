@@ -24,7 +24,7 @@ class Job(BaseModel):
     attachment = models.FileField(upload_to='attachments/', null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return self.name or "Unnamed JobGroup"
 
   
     

@@ -249,3 +249,22 @@ def delete_candidate(request, candidate_id):
 
     candidate.delete()
     return Response({'message': 'Candidate deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def candidate_list(request):
+    candidates = Candidate.objects.all()
+    candidate_list = []
+    
+    for candidate in candidates:
+        candidate_list.append({
+            'first_name': candidate.first_name,
+            'last_name': candidate.last_name,
+            'email': candidate.email,
+            'phone_number': candidate.phone_number,
+            'resume_id': candidate.resume_id if candidate.resume else None,
+            'job_id': candidate.job_id if candidate.job else None,
+        })
+        
+    return Response(candidate_list, status=status.HTTP_200_OK)

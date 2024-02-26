@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import IntegrityError
 from .models import JobGroup, Department, Job
 from resume_parser.models import Resume
-
+from .serializers import JobGroupSerializer, JobSerializer
 
 from operator import index
 from pandas._config.config import options
@@ -31,14 +31,11 @@ def create_job_group(request , department_id):
 
     job_group = JobGroup.objects.create(name=name, department=department)
 
+    serializer = JobGroupSerializer(job_group)
+
     response_data = {
         'message': 'JobGroup created successfully',
-        'jobGroup': {
-            'id': job_group.id,
-            'name': job_group.name,
-            'department_id': job_group.department.id if job_group.department else None,
-            'isActive': True
-        }
+        'jobGroup': serializer.data  
     }
 
     return Response(response_data)
@@ -63,14 +60,31 @@ def update_job_group(request, job_group_id):
     job_group.department = department
     job_group.save()
 
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_job_group(request, job_group_id):
+    try:
+        job_group = JobGroup.objects.get(id=job_group_id)
+    except JobGroup.DoesNotExist:
+        return Response({'message': 'JobGroup not found'}, status=404)
+
+    name = request.data.get('name')
+    department_id = request.data.get('department_id')
+
+    try:
+        department = Department.objects.get(pk=department_id)
+    except Department.DoesNotExist:
+        return Response({'message': 'Department does not exist'}, status=400)
+
+    job_group.name = name
+    job_group.department = department
+    job_group.save()
+
+    serializer = JobGroupSerializer(job_group)
+
     response_data = {
         'message': 'JobGroup updated successfully',
-        'jobGroup': {
-            'id': job_group.id,
-            'name': job_group.name,
-            'department_id': job_group.department.id if job_group.department else None,
-            'isActive' : True
-        }
+        'jobGroup': serializer.data  
     }
 
     return Response(response_data)
@@ -114,7 +128,9 @@ def create_job(request, job_group_id):
         department=department,
     )
 
-    return Response({'message': 'Job created successfully', }, status=201)
+    serializer = JobSerializer(job)
+
+    return Response({'message': 'Job created successfully', 'job': serializer.data}, status=201)
 
 
 @api_view(['PUT'])
@@ -131,8 +147,12 @@ def update_job(request, job_id):
     job.attachment = request.data.get('attachment', job.attachment)
     job.department = request.data.get('department', job.department)
     job.save()
+    
+    serializer = JobSerializer(job)
 
-    return Response({'message': 'Job updated successfully'})
+    return Response({'message': 'Job updated successfully', 'job': serializer.data}, status=201)
+
+
 
 @api_view(['DELETE'])
 @permission_classes([AllowAny])
