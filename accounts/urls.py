@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('logout/', logout,),
     path('check-login',check_login,name='check_login'),
     path('users/', get_all_users, name='get_all_users'),
     path('users/<int:user_id>/', get_user_by_id, name='get_user_by_id'),

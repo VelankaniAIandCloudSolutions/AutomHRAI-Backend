@@ -10,7 +10,19 @@ from .models import UserAccount , Company
 from . import codeigniter_db_module
 from app_settings.models import *
 from candidate_ranking.models import *
+from rest_framework_simplejwt.tokens import RefreshToken
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    try:
+        refresh_token = request.data.get("refresh_token")
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+    except Exception as e:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
 @api_view(['GET'])
 @permission_classes([])
 def get_all_users(request):

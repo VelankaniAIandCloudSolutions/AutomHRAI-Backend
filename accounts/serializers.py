@@ -21,4 +21,6 @@ class UserAccountSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_user_image(self, obj):
+        if not obj.user_image:
+            return None
         return settings.WEBSITE_URL + obj.user_image.url
