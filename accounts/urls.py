@@ -11,8 +11,9 @@ urlpatterns = [
     path('users/update/<int:user_id>/', update_user, name='update_user'),
     path('users/delete/<int:user_id>/', delete_user, name='delete_user'),
     path('user/authenticated/', get_authenticated_user,name='get_authenticated_user'), 
-   
-    
+    path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'), 
+    path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'), 
+    path('import-jobs-from-automhr/', import_jobs_from_automhr,name='import_jobs_from_automhr'), 
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
