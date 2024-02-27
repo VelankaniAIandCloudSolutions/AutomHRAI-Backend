@@ -34,10 +34,12 @@ def get_all_users(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated]) 
-def get_authenticated_user(request):
+def get_user_account(request):
     user = request.user 
     serializer = UserAccountSerializer(user)
-    return Response(serializer.data)
+    return Response({
+        'user_account': serializer.data
+    })
 
 
 @api_view(['GET'])
