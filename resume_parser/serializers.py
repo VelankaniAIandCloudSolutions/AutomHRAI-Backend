@@ -1,10 +1,17 @@
 from rest_framework import serializers
 from .models import Resume , Candidate
+from django.conf import settings
 
 class ResumeSerializer(serializers.ModelSerializer):
+    resume_file_path  = serializers.SerializerMethodField()
     class Meta:
         model = Resume
         fields = '__all__'
+
+    def get_resume_file_path(self,obj):
+        if obj.resume_file_path:
+            return settings.WEBSITE_URL + str(obj.resume_file_path.url)
+        return None
 
 class CandidateSerializer(serializers.ModelSerializer):
     resume = ResumeSerializer()

@@ -79,6 +79,7 @@ def download_resume(request, resume_id):
     if resume.resume_file_path:
         try:
             file_path = resume.resume_file_path.path
+            
             with open(file_path, 'rb') as resume_file:
                 response = FileResponse(resume_file)
                 response['Content-Disposition'] = f'attachment; filename="{resume.resume_file_path.name}"'
@@ -234,6 +235,15 @@ def update_candidate(request, candidate_id):
         resume.name = f"{candidate.first_name} {candidate.last_name}".strip()
         resume.email = candidate.email
         resume.mobile_number = candidate.phone_number
+        resume.education = request.data.get('education', resume.education)
+        resume.company_name = request.data.get('company_name', resume.company_name)
+        resume.designation = request.data.get('designation', resume.designation)
+        resume.experience = request.data.get('experience', resume.experience)
+        resume.total_experience = request.data.get('total_experience', resume.total_experience)
+        resume.skills = request.data.get('skills', resume.skills)
+        resume.college_name = request.data.get('college_name', resume.college_name)
+
+        
         resume.save()
 
     return Response({'message': 'Candidate updated successfully'}, status=status.HTTP_200_OK)
@@ -253,18 +263,12 @@ def delete_candidate(request, candidate_id):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def candidate_list(request):
+
+def get_candidate_list(request):
     candidates = Candidate.objects.all()
-    candidate_list = []
     
-    for candidate in candidates:
-        candidate_list.append({
-            'first_name': candidate.first_name,
-            'last_name': candidate.last_name,
-            'email': candidate.email,
-            'phone_number': candidate.phone_number,
-            'resume_id': candidate.resume_id if candidate.resume else None,
-            'job_id': candidate.job_id if candidate.job else None,
-        })
-        
-    return Response(candidate_list, status=status.HTTP_200_OK)
+    candidate_serializer = CandidateSerializer(candidates , many = True)
+
+    # print(candidate_serializer)
+
+    return Response(candidate_serializer.data)

@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'resume_parser',
     'app_settings',
     'rest_framework_simplejwt.token_blacklist'
+    'corsheaders',
 ]
 
 REST_FRAMEWORK = {
