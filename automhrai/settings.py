@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'facial_recognition',
     'resume_parser',
     'app_settings',
+    'corsheaders',
 ]
 
 REST_FRAMEWORK = {
