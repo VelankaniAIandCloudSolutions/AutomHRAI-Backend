@@ -27,6 +27,7 @@ from .models import CheckInAndOut
 from django.db.models import F, ExpressionWrapper, fields
 from django.db.models import Sum
 
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def upload_photo(request):
@@ -149,46 +150,6 @@ def break_in_out(request):
 
 
 
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def upload_photo(request):
-#     if request.method == 'POST':
-#         photo_data = request.POST.get('photo')
-#         checkin_time = timezone.now()  # Get the current time
-#         type = request.POST.get('type')  # Get the type data from the request
-#         if photo_data:
-#             # Splitting the data to separate the base64 header from the actual encoded image data
-#             _, str_img = photo_data.split(';base64,')
-#             decoded_contentfile = base64.b64decode(str_img)
-
-#             filename = 'upload.png'  
-#             path = os.path.join('media', filename)  
-#             with open(path, 'wb') as f:
-#                 f.write(decoded_contentfile)
-
-#             print(path)
-
-#             # Classify the face detected in the uploaded image
-#             detected_user = classify_face(path, 0.4)
-#             print(detected_user)
-#             if detected_user:
-#                 # Check if the detected user exists in the database
-#                 try:
-#                     user = UserAccount.objects.get(email=detected_user)
-#                     # Create a CheckInAndOut instance and save it to the database
-#                     check_in_out = CheckInAndOut.objects.create(
-#                         type=type,  # Set the type field based on the request data
-#                         user=user,
-#                         image=path,
-#                         created_at=checkin_time  # Set the created_at field
-#                     )
-#                     return JsonResponse({'message': f'Photo received and processed successfully. Detected user: {detected_user}'})
-#                 except UserAccount.DoesNotExist:
-#                     return JsonResponse({'error': 'Detected user not found or does not exist'}, status=400)
-#             else:
-#                 return JsonResponse({'error': 'No face detected in the uploaded photo'}, status=400)
-#         else:
-#             return JsonResponse({'error': 'No photo found in the request'}, status=400)
 
 
 import pytz
@@ -241,45 +202,7 @@ def get_checkin_data(request, user_id):
 
     return JsonResponse(combined_data)
 
-# @api_view(['GET'])
-# @permission_classes([AllowAny])
-# def get_checkin_data(request, user_id):
-#     # Get the current date
-#     today = timezone.now().date()
 
-#     # Filter check-in and check-out data for the current day and the specified user
-#     checkin_data = CheckInAndOut.objects.filter(
-#         user_id=user_id,
-#         created_at__date=today,
-#     ).values()
-
-#     # Filter timesheet data for the current day and the specified user
-#     timesheet_data = TimeSheet.objects.filter(
-#         user_id=user_id,
-#         date=today,
-#     ).values()
-
-#     # Convert UTC time to local time for checkin_data
-#     import pytz
-
-#     # Convert UTC time to local time for checkin_data
-#     for data in checkin_data:
-#         data['created_at'] = data['created_at'].astimezone(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-#         data['updated_at'] = data['updated_at'].astimezone(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-
-#     # Convert UTC time to local time for timesheet_data
-#     for data in timesheet_data:
-#         data['created_at'] = data['created_at'].astimezone(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-#         data['updated_at'] = data['updated_at'].astimezone(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d %H:%M:%S')
-
-
-#     # Combine the data from both models into a single dictionary
-#     combined_data = {
-#         'checkin_data': list(checkin_data),
-#         'timesheet_data': list(timesheet_data),
-#     }
-
-#     return Response(combined_data)
 
 
 @api_view(['GET'])
@@ -313,12 +236,73 @@ def get_attendance_list(request):
     return Response(list(serialized_data.values()))
 
 
-# @api_view(['GET'])
-# @permission_classes([AllowAny])
-# def get_attendance_list(request):
 
-#     attendace_list = CheckInAndOut.objects.all()
+@api_view(['GET'])
+def get_timesheet_data(request):
+    user = request.user
+    time_sheet_entries = TimeSheet.objects.filter(user=user)
+    serialized_data = []
 
-#     serializers = CheckInAndOutSerializer(attendace_list , many = True)
+    for entry in time_sheet_entries:
+        # Calculate total working time for the day
+        total_working_time = entry.working_time.total_seconds() if entry.working_time else 0
 
-#     return Response(serializers.data)
+        # Calculate total break time for the day
+        total_break_time = entry.break_time.total_seconds() if entry.break_time else 0
+
+        serialized_entry = {
+            'id': entry.id,
+            'user': {
+                'id': entry.user.id,
+                'name': entry.user.get_full_name(),
+                'email': entry.user.email
+            },
+            'date': entry.date.strftime("%Y-%m-%d"),
+            'check_in': None,  # Assume check_in is a field in your TimeSheet model
+            'check_out': None,  # Assume check_out is a field in your TimeSheet model
+            'total_working_time': total_working_time,
+            'total_break_time': total_break_time,
+            'net_working_time': total_working_time - total_break_time
+        }
+        serialized_data.append(serialized_entry)
+
+    return Response(serialized_data)
+
+@api_view(['GET'])
+def get_timesheet_data(request, user_id):
+   
+    # user_id = int(user_id)
+    time_sheet_entries = TimeSheet.objects.filter(user__id=user_id)
+
+    serialized_data = []
+    for entry in time_sheet_entries:
+        
+        check_in_entry = CheckInAndOut.objects.filter(user__id=user_id, type='checkin', created_at__date=entry.date).first()
+        check_out_entry = CheckInAndOut.objects.filter(user__id=user_id, type='checkout', created_at__date=entry.date).first()
+       
+        total_working_time = entry.working_time.total_seconds() if entry.working_time else 0
+
+        total_break_time = entry.break_time.total_seconds() if entry.break_time else 0
+
+        net_working_time = total_working_time - total_break_time
+
+        serialized_entry = {
+            'id': entry.id,
+            'user': {
+                'id': entry.user.id,
+                'name': entry.user.get_full_name(),
+                'email': entry.user.email
+            },
+            'date': entry.date.strftime("%Y-%m-%d"),
+            'created_at': timezone.localtime(entry.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+            'check_in': check_in_entry.created_at.strftime("%Y-%m-%d %H:%M:%S") if check_in_entry else None,
+            'check_out': check_out_entry.created_at.strftime("%Y-%m-%d %H:%M:%S") if check_out_entry else None,
+            'total_working_time': total_working_time,
+            'total_break_time': total_break_time,
+            'net_working_time': net_working_time
+        }
+        serialized_data.append(serialized_entry)
+
+    return Response(serialized_data)
+
+

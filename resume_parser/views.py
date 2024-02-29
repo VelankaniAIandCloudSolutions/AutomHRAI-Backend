@@ -238,13 +238,15 @@ def update_candidate(request, candidate_id):
         resume.education = request.data.get('education', resume.education)
         resume.company_name = request.data.get('company_name', resume.company_name)
         resume.designation = request.data.get('designation', resume.designation)
-        resume.experience = request.data.get('experience', resume.experience)
+        resume.experience = request.data.get('experiance', resume.experience)
         resume.total_experience = request.data.get('total_experience', resume.total_experience)
         resume.skills = request.data.get('skills', resume.skills)
         resume.college_name = request.data.get('college_name', resume.college_name)
 
-        
+
         resume.save()
+
+
 
     return Response({'message': 'Candidate updated successfully'}, status=status.HTTP_200_OK)
 

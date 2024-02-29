@@ -7,7 +7,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('file_upload_view/', views.file_upload_view, name='file_upload_view'),
     path('get_resumes/',views.get_resumes, name='get_resumes' ),
-    path('candidate_list/', views.candidate_list, name='candidate_list'),
+    # path('candidate_list/', views.candidate_list, name='candidate_list'),
     path('update_multiple_resumes/',views.update_multiple_resumes,name='update_multiple_resumes'),
     path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
     path('update_resume/<int:resume_id>/',views.update_resume, name='update_resume'),

@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'facial_recognition',
     'resume_parser',
     'app_settings',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
 ]
 
