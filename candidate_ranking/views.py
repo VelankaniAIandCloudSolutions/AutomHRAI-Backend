@@ -40,6 +40,26 @@ def create_job_group(request , department_id):
 
     return Response(response_data)
 
+# @api_view(['PUT'])
+# @permission_classes([AllowAny])
+# def update_job_group(request, job_group_id):
+#     try:
+#         job_group = JobGroup.objects.get(id=job_group_id)
+#     except JobGroup.DoesNotExist:
+#         return Response({'message': 'JobGroup not found'}, status=404)
+
+#     name = request.data.get('name')
+#     department_id = request.data.get('department_id')
+
+#     try:
+#         department = Department.objects.get(pk=department_id)
+#     except Department.DoesNotExist:
+#         return Response({'message': 'Department does not exist'}, status=400)
+
+#     job_group.name = name
+#     job_group.department = department
+#     job_group.save()
+
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def update_job_group(request, job_group_id):
@@ -49,28 +69,8 @@ def update_job_group(request, job_group_id):
         return Response({'message': 'JobGroup not found'}, status=404)
 
     name = request.data.get('name')
-    department_id = request.data.get('department_id')
-
-    try:
-        department = Department.objects.get(pk=department_id)
-    except Department.DoesNotExist:
-        return Response({'message': 'Department does not exist'}, status=400)
-
-    job_group.name = name
-    job_group.department = department
-    job_group.save()
-
-@api_view(['PUT'])
-@permission_classes([AllowAny])
-def update_job_group(request, job_group_id):
-    try:
-        job_group = JobGroup.objects.get(id=job_group_id)
-    except JobGroup.DoesNotExist:
-        return Response({'message': 'JobGroup not found'}, status=404)
-
-    name = request.data.get('name')
-    department_id = request.data.get('department_id')
-
+    department_id = request.data.get('id')
+    print(department_id)
     try:
         department = Department.objects.get(pk=department_id)
     except Department.DoesNotExist:
@@ -125,8 +125,9 @@ def create_job(request, job_group_id):
         job_group=job_group,
         job_description=job_description,
         attachment=attachment,
-        department=department,
+        
     )
+    job.departments.set([department])
 
     serializer = JobSerializer(job)
 
@@ -145,7 +146,13 @@ def update_job(request, job_id):
     job.name = request.data.get('name', job.name)
     job.job_description = request.data.get('job_description', job.job_description)
     job.attachment = request.data.get('attachment', job.attachment)
-    job.department = request.data.get('department', job.department)
+    department_name = request.data.get('department')
+    if department_name:
+        try:
+            department = Department.objects.get(name=department_name)
+        except Department.DoesNotExist:
+            return Response({'error': 'Invalid department name'}, status=400)
+        job.departments.set([department])
     job.save()
     
     serializer = JobSerializer(job)
