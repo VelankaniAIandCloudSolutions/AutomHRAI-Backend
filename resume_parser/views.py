@@ -49,7 +49,7 @@ def file_upload_view(request):
         print(data)
 
         resume = Resume(
-            resume_file_path=saved_path,
+            resume_file_path= saved_path,
             name=data.get('name'),
             email=data.get('email'),
             mobile_number=data.get('mobile_number'),

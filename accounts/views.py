@@ -113,6 +113,7 @@ def create_user(request):
 def update_user(request, user_id):
     try:
         data = request.data
+        print(data)
         try:
             user = UserAccount.objects.get(id=user_id)
         except UserAccount.DoesNotExist:
@@ -154,6 +155,11 @@ def update_user(request, user_id):
         user_image = request.FILES.get('user_image')
         if user_image:
             user.user_image = user_image
+
+        elif data.get('user_image') == 'null':
+            # Delete the existing user image
+            user.user_image.delete(save=False)
+            
 
         user.save()
 
