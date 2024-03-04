@@ -49,6 +49,7 @@ def file_upload_view(request):
         print(data)
 
         resume = Resume(
+            resume_file_path=saved_path,
             name=data.get('name'),
             email=data.get('email'),
             mobile_number=data.get('mobile_number'),
@@ -61,11 +62,13 @@ def file_upload_view(request):
             experience=', '.join(data.get('experience')) if data.get('experience') is not None else None,
         )
         resume.save()
+        print(saved_path)
 
         resume_serializer = ResumeSerializer(resume)
         response_data.append({'file_name': file.name, 'saved_path': saved_path, 'status': 'File saved successfully', 'parsed_data': resume_serializer.data})
 
     return Response({'message': 'Files uploaded successfully', 'resumes': response_data}, status=status.HTTP_201_CREATED)
+
 
 
 @api_view(['GET'])
