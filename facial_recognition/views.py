@@ -374,17 +374,22 @@ def get_attendance_list(request, user_id):
 
 from django.utils import timezone
 
+from django.db.models import Sum
+
 @api_view(['GET'])
 def get_timesheet_data(request, user_id):
     time_sheet_entries = TimeSheet.objects.filter(user__id=user_id)
 
     serialized_data = []
     for entry in time_sheet_entries:
-        check_in_entry = CheckInAndOut.objects.filter(user__id=user_id, type='checkin', created_at__date=entry.date).first()
-        check_out_entry = CheckInAndOut.objects.filter(user__id=user_id, type='checkout', created_at__date=entry.date).first()
-       
-        total_working_time = entry.working_time.total_seconds() if entry.working_time else 0
-        total_break_time = entry.break_time.total_seconds() if entry.break_time else 0
+        check_ins = CheckInAndOut.objects.filter(user__id=user_id, type='checkin', created_at__date=entry.date)
+        check_outs = CheckInAndOut.objects.filter(user__id=user_id, type='checkout', created_at__date=entry.date)
+        break_ins = BreakInAndOut.objects.filter(user__id=user_id, type='breakin', created_at__date=entry.date)
+        break_outs = BreakInAndOut.objects.filter(user__id=user_id, type='breakout', created_at__date=entry.date)
+
+        total_working_time = sum((co.created_at - ci.created_at).total_seconds() for ci, co in zip(check_ins, check_outs))
+        total_break_time = sum((bo.created_at - bi.created_at).total_seconds() for bi, bo in zip(break_ins, break_outs))
+        
         net_working_time = total_working_time - total_break_time
 
         serialized_entry = {
@@ -396,15 +401,54 @@ def get_timesheet_data(request, user_id):
             },
             'date': entry.date.strftime("%Y-%m-%d"),
             'created_at': timezone.localtime(entry.created_at).strftime("%Y-%m-%d %H:%M:%S"),
-            'check_in': timezone.localtime(check_in_entry.created_at).strftime("%Y-%m-%d %H:%M:%S") if check_in_entry else None,
-            'check_out': timezone.localtime(check_out_entry.created_at).strftime("%Y-%m-%d %H:%M:%S") if check_out_entry else None,
+            'check_ins': [timezone.localtime(ci.created_at).strftime("%Y-%m-%d %H:%M:%S") for ci in check_ins],
+            'check_outs': [timezone.localtime(co.created_at).strftime("%Y-%m-%d %H:%M:%S") for co in check_outs],
+            'break_ins': [timezone.localtime(bi.created_at).strftime("%Y-%m-%d %H:%M:%S") for bi in break_ins],
+            'break_outs': [timezone.localtime(bo.created_at).strftime("%Y-%m-%d %H:%M:%S") for bo in break_outs],
             'total_working_time': total_working_time,
             'total_break_time': total_break_time,
             'net_working_time': net_working_time
         }
         serialized_data.append(serialized_entry)
 
+    # Return only unique dates
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
+
     return Response(serialized_data)
+
+
+
+# @api_view(['GET'])
+# def get_timesheet_data(request, user_id):
+#     time_sheet_entries = TimeSheet.objects.filter(user__id=user_id)
+
+#     serialized_data = []
+#     for entry in time_sheet_entries:
+#         check_in_entry = CheckInAndOut.objects.filter(user__id=user_id, type='checkin', created_at__date=entry.date).first()
+#         check_out_entry = CheckInAndOut.objects.filter(user__id=user_id, type='checkout', created_at__date=entry.date).first()
+       
+#         total_working_time = entry.working_time.total_seconds() if entry.working_time else 0
+#         total_break_time = entry.break_time.total_seconds() if entry.break_time else 0
+#         net_working_time = total_working_time - total_break_time
+
+#         serialized_entry = {
+#             'id': entry.id,
+#             'user': {
+#                 'id': entry.user.id,
+#                 'name': entry.user.get_full_name(),
+#                 'email': entry.user.email
+#             },
+#             'date': entry.date.strftime("%Y-%m-%d"),
+#             'created_at': timezone.localtime(entry.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+#             'check_in': timezone.localtime(check_in_entry.created_at).strftime("%Y-%m-%d %H:%M:%S") if check_in_entry else None,
+#             'check_out': timezone.localtime(check_out_entry.created_at).strftime("%Y-%m-%d %H:%M:%S") if check_out_entry else None,
+#             'total_working_time': total_working_time,
+#             'total_break_time': total_break_time,
+#             'net_working_time': net_working_time
+#         }
+#         serialized_data.append(serialized_entry)
+
+#     return Response(serialized_data)
 
 
 
