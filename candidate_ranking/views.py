@@ -263,7 +263,6 @@ def calculate_scores(resumes, job_description):
         scores.append(score)
     return scores
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def rank_candidates(request, job_id):
@@ -275,13 +274,23 @@ def rank_candidates(request, job_id):
     try:
         single_job_description = [job.name, job.job_description]
         single_job_document = create_single_job_document(single_job_description)
-        Jd = get_cleaned_words(single_job_document)
+        try:
+            Jd = get_cleaned_words(single_job_document)
+        except Exception as e:
+            return Response({'error': 'Add some more information to Job Description'})
 
         jd_database = pd.DataFrame(Jd, columns=["Name", "Context", "Cleaned", "Selective", "Selective_Reduced", "TF_Based"])
 
         resumes = Resume.objects.filter(candidates__job=job)
+        if len(resumes) == 0:  # Use len() to check the length
+            return Response({'error': 'No Candidates for this Job'}, status=400)
+
         document = read_resumes(resumes)
-        Doc = get_cleaned_words(document)
+        try:
+            Doc = get_cleaned_words(document)
+        except Exception as e:
+            return Response({'error': 'Error processing resume documents'})
+        
         resume_database = pd.DataFrame(Doc, columns=["Name", "Context", "Cleaned", "Selective", "Selective_Reduced", "TF_Based"])
 
         resume_database['Scores'] = calculate_scores(resume_database, jd_database)
