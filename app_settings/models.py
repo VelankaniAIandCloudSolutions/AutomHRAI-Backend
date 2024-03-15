@@ -21,18 +21,19 @@ class Customer(models.Model):
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
+    ref_id = models.IntegerField(null=True, blank=True)
     customer = models.ForeignKey(Customer,related_name='companies', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.name
 
-class Entity(models.Model):
-    name = models.CharField(max_length=200)
-    ref_id = models.IntegerField(null=True, blank=True)
-    company = models.ForeignKey(Company, related_name='entities', on_delete=models.SET_NULL, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+# class Entity(models.Model):
+#     name = models.CharField(max_length=200)
+#     ref_id = models.IntegerField(null=True, blank=True)
+#     company = models.ForeignKey(Company, related_name='entities', on_delete=models.SET_NULL, null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name

@@ -41,7 +41,6 @@ def get_user_account(request):
         'user_account': serializer.data
     })
 
-
 @api_view(['GET'])
 @permission_classes([])
 def get_user_by_id(request, user_id):
@@ -176,73 +175,76 @@ def delete_user(request, user_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def check_login(request):
-    return Response(status=status.HTTP_200_OK)
+    print(request.user)
+    return Response(data={'test':'test'},status=status.HTTP_200_OK)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def import_entities_from_automhr(request):
-    entities  = codeigniter_db_module.fetch_all_entities()
+# @api_view(['GET'])
+# @permission_classes([AllowAny])
+# def import_entities_from_automhr(request):
+#     entities  = codeigniter_db_module.fetch_all_entities()
 
-    customer,created = Customer.objects.get_or_create(name='Velankani')
-    company,created = Company.objects.get_or_create(name='Velankani',customer = customer)
+#     customer,created = Customer.objects.get_or_create(name='Velankani')
+#     company,created = Company.objects.get_or_create(name='Velankani',customer = customer)
 
-    for entity_data in entities:
-        entity_name = entity_data['branch_name']
-        entity_ref_id = entity_data['branch_id']
+#     for entity_data in entities:
+#         entity_name = entity_data['branch_name']
+#         entity_ref_id = entity_data['branch_id']
 
-        entity, created = Entity.objects.update_or_create(ref_id = entity_ref_id,company =company,defaults={
-            'name': entity_name
-        })
+#         entity, created = Company.objects.update_or_create(ref_id = entity_ref_id,company =company,defaults={
+#             'name': entity_name
+#         })
         
-    return Response({'message':'Entities imported'},status=status.HTTP_200_OK)
+#     return Response({'message':'Entities imported'},status=status.HTTP_200_OK)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def import_departments_from_automhr(request):
-    departments  = codeigniter_db_module.fetch_all_departments()
-    customer,created = Customer.objects.get_or_create(name='Velankani')
-    company,created = Company.objects.get_or_create(name='Velankani',customer = customer)
+# @api_view(['GET'])
+# @permission_classes([AllowAny])
+# def import_departments_from_automhr(request):
+#     departments  = codeigniter_db_module.fetch_all_departments()
+#     customer,created = Customer.objects.get_or_create(name='Velankani')
+#     company,created = Company.objects.get_or_create(name='Velankani',customer = customer)
 
-    for department_data in departments:
-        dept_name = department_data['deptname']
-        dept_ref_id = department_data['deptid']
-        entity_ref_id = department_data['branch_id']
+#     for department_data in departments:
+#         dept_name = department_data['deptname']
+#         dept_ref_id = department_data['deptid']
+#         entity_ref_id = department_data['branch_id']
     
-        try:
-            entity = Entity.objects.get(ref_id=entity_ref_id,company = company)
-        except Entity.DoesNotExist:
-            entity = None
+#         try:
+#             entity = Entity.objects.get(ref_id=entity_ref_id,company = company)
+#         except Entity.DoesNotExist:
+#             entity = None
 
-        department, created = Department.objects.update_or_create(name=dept_name,ref_id = dept_ref_id,company =company,defaults={
-            'entity':entity
-        })
+#         department, created = Department.objects.update_or_create(name=dept_name,ref_id = dept_ref_id,company =company,defaults={
+#             'entity':entity
+#         })
         
-    return Response({'message':'Departments imported'},status=status.HTTP_200_OK)
+#     return Response({'message':'Departments imported'},status=status.HTTP_200_OK)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def import_jobs_from_automhr(request):
-    jobs  = codeigniter_db_module.fetch_all_jobs()
-    customer,created = Customer.objects.get_or_create(name='Velankani')
-    company,created = Company.objects.get_or_create(name='Velankani',customer = customer)
+# @api_view(['GET'])
+# @permission_classes([AllowAny])
+# def import_jobs_from_automhr(request):
+#     jobs  = codeigniter_db_module.fetch_all_jobs()
+#     customer,created = Customer.objects.get_or_create(name='Velankani')
+#     company,created = Company.objects.get_or_create(name='Velankani',customer = customer)
 
-    for job_data in jobs:
-        job_name = job_data['job_title']
-        job_ref_id = job_data['id']
-        description = job_data['description']
-        department_id = job_data['department_id']
+#     for job_data in jobs:
+#         job_name = job_data['job_title']
+#         job_ref_id = job_data['id']
+#         description = job_data['description']
+#         department_id = job_data['department_id']
 
-        try:
-            department = Department.objects.get(ref_id=department_id,company = company)
-        except Department.DoesNotExist:
-            department = None
-        print(department_id)
-        job, created = Job.objects.update_or_create(name=job_name,ref_id = job_ref_id,company =company,defaults={
-            'job_description':description,
-        })
+#         try:
+#             department = Department.objects.get(ref_id=department_id,company = company)
+#         except Department.DoesNotExist:
+#             department = None
+#         print(department_id)
+#         job, created = Job.objects.update_or_create(name=job_name,ref_id = job_ref_id,company =company,defaults={
+#             'job_description':description,
+#         })
 
-        job.departments.add(department)
-        job.save()
+#         job.departments.add(department)
+#         job.save()
         
-    return Response({'message':'Jobs imported'},status=status.HTTP_200_OK)
+#     return Response({'message':'Jobs imported'},status=status.HTTP_200_OK)
+

@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
@@ -36,7 +36,7 @@ def handle_uploaded_file(file):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def file_upload_view(request):
+def upload_resumes(request):
     files = request.FILES.getlist('resumes')
     response_data = []
     
@@ -134,14 +134,15 @@ def update_resume(request, resume_id):
 
 
 @api_view(['PUT'])
-@permission_classes([AllowAny])
-
-def update_multiple_resumes(request):
+@permission_classes([IsAuthenticated])
+def update_multiple_resumes(request,job_id):
     try:
         updated_resumes = request.data.get('updated_resumes', [])
         
         response_data = []
         
+        job  = Job.objects.get(pk=job_id)
+
         for updated_data in updated_resumes:
             resume_id = updated_data.get('id')
             try:
@@ -162,7 +163,18 @@ def update_multiple_resumes(request):
             resume.experience = updated_data.get('experience', resume.experience)
 
             resume.save()
-
+            name_parts = resume.name.split()
+            first_name = name_parts[0] if name_parts else ''
+            last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+            
+            Candidate.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                email=resume.email,
+                phone_number=resume.mobile_number,
+                resume=resume,
+                job=job
+            )
             resume_serializer = ResumeSerializer(resume, data=updated_data, partial=True)
 
             if resume_serializer.is_valid():

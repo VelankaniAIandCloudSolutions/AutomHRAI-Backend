@@ -4,7 +4,7 @@ from app_settings.models import *
 
 class Department(BaseModel):
     name = models.CharField(max_length=100, null=True, blank=True)
-    entity = models.ForeignKey(Entity, related_name='departments', on_delete=models.SET_NULL, null=True, blank=True)
+    company = models.ForeignKey(Company, related_name='departments', on_delete=models.SET_NULL, null=True, blank=True)
     ref_id = models.IntegerField(null=True, blank=True)
 
     def __str__(self):

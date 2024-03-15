@@ -206,9 +206,9 @@ def jobgroup_list(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 def get_jobs(request):
-    jobs = Job.objects.all()
+    print(request.user)
+    jobs = Job.objects.filter(company = request.user.company)
     job_list = []
 
     for job in jobs:

@@ -5,10 +5,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('file_upload_view/', views.file_upload_view, name='file_upload_view'),
+    path('upload-resumes/', views.upload_resumes, name='upload_resumes'),
     path('get_resumes/',views.get_resumes, name='get_resumes' ),
     # path('candidate_list/', views.candidate_list, name='candidate_list'),
-    path('update_multiple_resumes/',views.update_multiple_resumes,name='update_multiple_resumes'),
+    path('update_multiple_resumes/<job_id>/',views.update_multiple_resumes,name='update_multiple_resumes'),
     path('download_resume/<int:resume_id>/', views.download_resume, name='download_resume'),
     path('update_resume/<int:resume_id>/',views.update_resume, name='update_resume'),
     path('delete_resume/<int:resume_id>/', views.delete_resume , name='delete_resume'),
