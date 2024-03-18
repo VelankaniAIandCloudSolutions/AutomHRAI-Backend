@@ -137,8 +137,8 @@ def update_resume(request, resume_id):
 @permission_classes([IsAuthenticated])
 def update_multiple_resumes(request,job_id):
     try:
+        print(request.data)
         updated_resumes = request.data.get('updated_resumes', [])
-        
         response_data = []
         
         job  = Job.objects.get(pk=job_id)
@@ -166,7 +166,7 @@ def update_multiple_resumes(request,job_id):
             name_parts = resume.name.split()
             first_name = name_parts[0] if name_parts else ''
             last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
-            
+            print('before candidate')
             Candidate.objects.create(
                 first_name=first_name,
                 last_name=last_name,
@@ -175,6 +175,7 @@ def update_multiple_resumes(request,job_id):
                 resume=resume,
                 job=job
             )
+            print('after candidate')
             resume_serializer = ResumeSerializer(resume, data=updated_data, partial=True)
 
             if resume_serializer.is_valid():
