@@ -54,30 +54,34 @@ class UserAccountManager(BaseUserManager):
 
 class Agency(BaseModel):
 
-    name = models.CharField(max_length = 255 , blank = True , null = True)
+    name = models.CharField(max_length = 255)
     agency_owner = models.CharField(max_length = 255 , blank = True , null = True)
     gst = models.CharField(max_length = 255 , blank = True , null = True)
-    labour_license = models.FileField(upload_to='user_files/', null=True, blank=True)
-    pan = models.FileField(max_length = 255 , null = True , blank = True)
-    wcp = models.FileField(upload_to='user_files/', null=True, blank=True)
+    labour_license = models.FileField(upload_to='agency_documents/', null=True, blank=True)
+    pan = models.FileField(upload_to='agency_documents/', null = True , blank = True)
+    wcp = models.FileField(upload_to='agency_documents/', null=True, blank=True)
 
+    def __str__(self):
+        return self.name
+    
 class Category(BaseModel):
+    name = models.CharField(max_length = 255)
 
-    name = models.CharField(max_length = 255 , null = True , blank = True)
-
+    def __str__(self):
+        return self.name
 class Location(BaseModel):
-
-    name = models.CharField(max_length = 255 , blank = True , null = True)
+    name = models.CharField(max_length = 255)
     company = models.ForeignKey(Company , related_name = 'locations' , on_delete=models.CASCADE  , blank = True , null = True)
 
-
+    def __str__(self):
+        return self.name
 class Project(BaseModel):
+    name = models.CharField(max_length = 255)
+    location = models.ForeignKey(Location , related_name = 'projects' , on_delete = models.CASCADE, null = True)
+    category = models.ForeignKey(Category , related_name = 'projects' ,  on_delete = models.CASCADE, null = True)
 
-    name = models.CharField(max_length = 255 , blank = True , null = True)
-    location = models.ForeignKey(Location , related_name = 'projects' , on_delete = models.CASCADE , null = True , blank = True)
-    Category = models.ForeignKey(Category , related_name = 'projects' ,  on_delete = models.CASCADE , null = True , blank = True)
-
-
+    def __str__(self):
+        return self.name
 
 class UserAccount(AbstractBaseUser, PermissionsMixin):
 
@@ -101,17 +105,15 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     )
     company = models.ForeignKey(Company,related_name='user_accounts',on_delete=models.CASCADE, null=True, blank=True)
     user_image  = models.FileField(upload_to='user_images/', null=True, blank=True)
-    objects = UserAccountManager()
-
     is_contact_worker = models.BooleanField(default = False ,  null = True , blank = True)
     is_superviser = models.BooleanField(default = False ,  null = True , blank = True)
     agency = models.ForeignKey(Agency , related_name = 'user_accounts' , on_delete=models.CASCADE , null = True , blank = True)
     dob = models.DateField(blank = True , null = True)
-    age = models.CharField(max_length = 255 , null = True , blank = True)
+    age = models.IntegerField(null = True , blank = True)
     addhar_card = models.FileField(upload_to='user_files/', null=True, blank=True)
     pan = models.FileField(upload_to='user_files/', null=True, blank=True)
     mobile = models.CharField(max_length = 255 , blank = True , null = True)
-    contact_vip_id = models.CharField(max_length = 255 , blank = True , null = True)
+    objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
