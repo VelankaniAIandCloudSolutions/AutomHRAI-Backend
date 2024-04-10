@@ -3,6 +3,34 @@ from django.db import models
 from django.utils import timezone
 from app_settings.models import *
 
+
+
+
+    
+class BaseModel(models.Model):
+    updated_by = models.ForeignKey(
+        'accounts.UserAccount', 
+        related_name='%(class)s_updates',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_by = models.ForeignKey(
+        'accounts.UserAccount', 
+        related_name='%(class)s_creators',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    updated_at = models.DateTimeField(auto_now=True,blank=True,null=True)
+    created_at = models.DateTimeField(default=timezone.now) 
+    company = models.ForeignKey(Company,related_name='%(class)s',on_delete=models.CASCADE, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        abstract = True
+
+
 class UserAccountManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
        email = self.normalize_email(email)
@@ -23,6 +51,33 @@ class UserAccountManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self.create_user(email, password, **extra_fields)
+
+class Agency(BaseModel):
+
+    name = models.CharField(max_length = 255 , blank = True , null = True)
+    agency_owner = models.CharField(max_length = 255 , blank = True , null = True)
+    gst = models.CharField(max_length = 255 , blank = True , null = True)
+    labour_license = models.FileField(upload_to='user_files/', null=True, blank=True)
+    pan = models.FileField(max_length = 255 , null = True , blank = True)
+    wcp = models.FileField(upload_to='user_files/', null=True, blank=True)
+
+class Category(BaseModel):
+
+    name = models.CharField(max_length = 255 , null = True , blank = True)
+
+class Location(BaseModel):
+
+    name = models.CharField(max_length = 255 , blank = True , null = True)
+    company = models.ForeignKey(Company , related_name = 'locations' , on_delete=models.CASCADE  , blank = True , null = True)
+
+
+class Project(BaseModel):
+
+    name = models.CharField(max_length = 255 , blank = True , null = True)
+    location = models.ForeignKey(Location , related_name = 'projects' , on_delete = models.CASCADE , null = True , blank = True)
+    Category = models.ForeignKey(Category , related_name = 'projects' ,  on_delete = models.CASCADE , null = True , blank = True)
+
+
 
 class UserAccount(AbstractBaseUser, PermissionsMixin):
 
@@ -48,6 +103,16 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     user_image  = models.FileField(upload_to='user_images/', null=True, blank=True)
     objects = UserAccountManager()
 
+    is_contact_worker = models.BooleanField(default = False ,  null = True , blank = True)
+    is_superviser = models.BooleanField(default = False ,  null = True , blank = True)
+    agency = models.ForeignKey(Agency , related_name = 'user_accounts' , on_delete=models.CASCADE , null = True , blank = True)
+    dob = models.DateField(blank = True , null = True)
+    age = models.CharField(max_length = 255 , null = True , blank = True)
+    addhar_card = models.FileField(upload_to='user_files/', null=True, blank=True)
+    pan = models.FileField(upload_to='user_files/', null=True, blank=True)
+    mobile = models.CharField(max_length = 255 , blank = True , null = True)
+    contact_vip_id = models.CharField(max_length = 255 , blank = True , null = True)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -61,27 +126,6 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
-class BaseModel(models.Model):
-    updated_by = models.ForeignKey(
-        'accounts.UserAccount', 
-        related_name='%(class)s_updates',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
-    created_by = models.ForeignKey(
-        'accounts.UserAccount', 
-        related_name='%(class)s_creators',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
-    updated_at = models.DateTimeField(auto_now=True,blank=True,null=True)
-    created_at = models.DateTimeField(default=timezone.now) 
-    company = models.ForeignKey(Company,related_name='%(class)s',on_delete=models.CASCADE, null=True, blank=True)
-    is_active = models.BooleanField(default=True)
-    
-    class Meta:
-        abstract = True
+
+
 

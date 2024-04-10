@@ -1,5 +1,5 @@
 from django.db import models
-from accounts.models import BaseModel , UserAccount
+from accounts.models import BaseModel , UserAccount , Project
 
 class CheckInAndOut(BaseModel):
 
@@ -11,6 +11,8 @@ class CheckInAndOut(BaseModel):
     type = models.CharField(max_length=100, choices=CHECK_CHOICES , blank = True , null = True)
     user = models.ForeignKey(UserAccount , related_name='checks' , on_delete=models.CASCADE)
     image = models.FileField(upload_to='attendance_images/', null=True, blank=True)
+    project = models.ForeignKey(Project , related_name = 'checks_project' , on_delete = models.CASCADE , blank = True , null = True)
+
 
 
 class BreakInAndOut(BaseModel):
