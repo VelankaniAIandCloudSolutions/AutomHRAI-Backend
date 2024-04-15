@@ -20,6 +20,12 @@ class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = '__all__'
+    
+class LocationSerializer(serializers.ModelSerializer):
+    company = CompanySerializer()
+    class Meta:
+        model = Location
+        fields = '__all__'
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
     full_name  = serializers.SerializerMethodField()

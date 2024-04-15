@@ -1,13 +1,16 @@
 from rest_framework import serializers
 from .models import *
-from accounts.serializers import UserAccountSerializer
+from accounts.serializers import *
 
 from django.conf import settings
+
 
 class CheckInAndOutSerializer(serializers.ModelSerializer):
     user = UserAccountSerializer()
     image = serializers.SerializerMethodField()
-
+    type = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%d/%m/%Y %I:%M %p')
+    location = LocationSerializer()
     class Meta:
         model = CheckInAndOut
         fields = '__all__'
@@ -17,11 +20,20 @@ class CheckInAndOutSerializer(serializers.ModelSerializer):
             return settings.WEBSITE_URL + '/media/' + str(obj.image)
         else:
             return ''
+    
+    def get_type(self, obj):
+        if(obj.type == 'checkin'):
+            return 'Check In'
+
+        elif(obj.type == 'checkout'):
+            return 'Check Out'
 
 
 class BreakInAndOutSerializer(serializers.ModelSerializer):
     user = UserAccountSerializer()
     image = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%d/%m/%Y %I:%M %p')
+    location = LocationSerializer()
     class Meta:
         model = BreakInAndOut
         fields = '__all__'
@@ -31,7 +43,13 @@ class BreakInAndOutSerializer(serializers.ModelSerializer):
             return settings.WEBSITE_URL + '/media/' + str(obj.image)
         else:
             return ''
+        
+    def get_type(self, obj):
+        if(obj.type == 'breakin'):
+            return 'Break In'
 
+        elif(obj.type == 'breakout'):
+            return 'Break Out'
 class TimeSheetSerializer(serializers.ModelSerializer):
     user = UserAccountSerializer()
    
