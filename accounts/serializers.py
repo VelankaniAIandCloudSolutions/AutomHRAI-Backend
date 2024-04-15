@@ -6,6 +6,7 @@ from django.conf import settings
 
 User = get_user_model()
 
+
 class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
     class Meta(djoser_serializers.UserCreateSerializer.Meta):
         model = User
@@ -15,7 +16,7 @@ class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
 
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = UserAccount
         fields = '__all__'
@@ -24,3 +25,15 @@ class UserAccountSerializer(serializers.ModelSerializer):
         if not obj.user_image:
             return None
         return settings.WEBSITE_URL + obj.user_image.url
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = '__all__'
+
+
+class AgencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agency
+        fields = '__all__'

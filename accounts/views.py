@@ -5,12 +5,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.shortcuts import get_object_or_404
-from .serializers import UserAccountSerializer, UserCreateSerializer
-from .models import UserAccount , Company
+from .serializers import *
+from .models import *
 from . import codeigniter_db_module
 from app_settings.models import *
 from candidate_ranking.models import *
 from rest_framework_simplejwt.tokens import RefreshToken
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -22,7 +23,8 @@ def logout(request):
         return Response(status=status.HTTP_205_RESET_CONTENT)
     except Exception as e:
         return Response(status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 @api_view(['GET'])
 @permission_classes([])
 def get_all_users(request):
@@ -32,14 +34,16 @@ def get_all_users(request):
         'users': users_serializer.data,
     })
 
+
 @api_view(['GET'])
-@permission_classes([IsAuthenticated]) 
+@permission_classes([IsAuthenticated])
 def get_user_account(request):
-    user = request.user 
+    user = request.user
     serializer = UserAccountSerializer(user)
     return Response({
         'user_account': serializer.data
     })
+
 
 @api_view(['GET'])
 @permission_classes([])
@@ -72,13 +76,13 @@ def create_user(request):
             is_staff = True
         else:
             is_staff = False
-        
+
         if data.get('is_superuser') == 'true':
             is_superuser = True
         else:
             is_superuser = False
 
-        company_id = data.get('company_id') 
+        company_id = data.get('company_id')
         user_image = request.FILES.get('user_image')
         emp_id = data.get('emp_id')
         company = None
@@ -127,14 +131,14 @@ def update_user(request, user_id):
             is_staff = True
         else:
             is_staff = False
-        
+
         if data.get('is_superuser') == 'true':
             is_superuser = True
         else:
             is_superuser = False
 
         user.email = data.get('email', user.email)
-        user.password = data.get('password', user.password) 
+        user.password = data.get('password', user.password)
         user.first_name = data.get('first_name', user.first_name)
         user.last_name = data.get('last_name', user.last_name)
         user.phone_number = data.get('phone_number', user.phone_number)
@@ -142,8 +146,8 @@ def update_user(request, user_id):
         user.is_active = is_active
         user.is_staff = is_staff
         user.is_superuser = is_superuser
-        
-        company_id = data.get('company_id') 
+
+        company_id = data.get('company_id')
         if company_id:
             try:
                 company = Company.objects.get(id=company_id)
@@ -158,7 +162,6 @@ def update_user(request, user_id):
         elif data.get('user_image') == 'null':
             # Delete the existing user image
             user.user_image.delete(save=False)
-            
 
         user.save()
 
@@ -174,11 +177,12 @@ def delete_user(request, user_id):
     user.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def check_login(request):
     print(request.user)
-    return Response(data={'test':'test'},status=status.HTTP_200_OK)
+    return Response(data={'test': 'test'}, status=status.HTTP_200_OK)
 
 # @api_view(['GET'])
 # @permission_classes([AllowAny])
@@ -195,7 +199,7 @@ def check_login(request):
 #         entity, created = Company.objects.update_or_create(ref_id = entity_ref_id,company =company,defaults={
 #             'name': entity_name
 #         })
-        
+
 #     return Response({'message':'Entities imported'},status=status.HTTP_200_OK)
 
 # @api_view(['GET'])
@@ -209,7 +213,7 @@ def check_login(request):
 #         dept_name = department_data['deptname']
 #         dept_ref_id = department_data['deptid']
 #         entity_ref_id = department_data['branch_id']
-    
+
 #         try:
 #             entity = Entity.objects.get(ref_id=entity_ref_id,company = company)
 #         except Entity.DoesNotExist:
@@ -218,7 +222,7 @@ def check_login(request):
 #         department, created = Department.objects.update_or_create(name=dept_name,ref_id = dept_ref_id,company =company,defaults={
 #             'entity':entity
 #         })
-        
+
 #     return Response({'message':'Departments imported'},status=status.HTTP_200_OK)
 
 # @api_view(['GET'])
@@ -245,6 +249,46 @@ def check_login(request):
 
 #         job.departments.add(department)
 #         job.save()
-        
+
 #     return Response({'message':'Jobs imported'},status=status.HTTP_200_OK)
 
+
+@api_view(['GET', 'DELETE'])
+@permission_classes([])
+def contract_workers(request, contract_worker_id=None):
+    if request.method == 'GET':
+        # Retrieve all contract workers
+        contract_workers = UserAccount.objects.filter(is_contract_worker=True)
+        serializer = UserAccountSerializer(contract_workers, many=True)
+        data = {"contract_workers": serializer.data}
+        return Response(data, status=status.HTTP_200_OK)
+
+    elif request.method == 'DELETE':
+        # Delete contract worker by ID
+        try:
+            if contract_worker_id:
+                contract_worker = UserAccount.objects.get(
+                    id=contract_worker_id, is_contract_worker=True)
+                contract_worker.delete()
+                return Response({"message": "Contract worker deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Contract worker ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
+        except UserAccount.DoesNotExist:
+            return Response({"error": "Contract worker not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([])
+def create_contract_worker(request):
+    if request.method == 'GET':
+        agencies = Agency.objects.all()
+        locations = Location.objects.all()
+        agency_serializer = AgencySerializer(agencies, many=True)
+        location_serializer = LocationSerializer(locations, many=True)
+        return Response({
+            'agencies': agency_serializer.data,
+            'locations': location_serializer.data
+        })
+    elif request.method == 'POST':
+        # Write your dummy POST logic here
+        return Response({"message": "Dummy POST logic"})
