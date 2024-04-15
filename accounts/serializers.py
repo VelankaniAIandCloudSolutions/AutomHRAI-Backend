@@ -12,10 +12,19 @@ class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
         fields = ('id', 'email', 'first_name', 'last_name', 'password',
                   'phone_number', 'is_superuser', 'is_staff', 'company', 'created_at', 'updated_at')
 
-
+class AgencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agency
+        fields = '__all__'
+class CompanySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = '__all__'
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
-    
+    full_name  = serializers.SerializerMethodField()
+    agency = AgencySerializer()
+    company = CompanySerializer()
     class Meta:
         model = UserAccount
         fields = '__all__'
@@ -24,3 +33,6 @@ class UserAccountSerializer(serializers.ModelSerializer):
         if not obj.user_image:
             return None
         return settings.WEBSITE_URL + obj.user_image.url
+
+    def get_full_name(self, obj):
+        return obj.get_full_name()

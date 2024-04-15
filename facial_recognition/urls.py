@@ -8,4 +8,5 @@ urlpatterns = [
     path('get_checkin_data/<int:user_id>/', get_checkin_data , name = 'get_checkin_data'),
     path('break_in_out/' , break_in_out , name = 'break_in_out'),
     path('get_timesheet_data/<int:user_id>/' ,  get_timesheet_data , name = 'get_timesheet_data'),
+    path('get_contract_worker_attendance' ,  get_contract_worker_attendance , name = 'get_contract_worker_attendance'),
 ]

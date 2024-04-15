@@ -11,7 +11,7 @@ class CheckInAndOut(BaseModel):
     type = models.CharField(max_length=100, choices=CHECK_CHOICES , blank = True , null = True)
     user = models.ForeignKey(UserAccount , related_name='checks' , on_delete=models.CASCADE)
     image = models.FileField(upload_to='attendance_images/', null=True, blank=True)
-    project = models.ForeignKey(Project , related_name = 'checks_project' , on_delete = models.CASCADE , blank = True , null = True)
+    project = models.ForeignKey(Project , related_name = 'check_ins_and_check_outs' , on_delete = models.SET_NULL , blank = True , null = True)
 
 
 

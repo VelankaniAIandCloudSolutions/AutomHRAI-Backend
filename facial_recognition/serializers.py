@@ -39,3 +39,14 @@ class TimeSheetSerializer(serializers.ModelSerializer):
     class Meta:
         model = TimeSheet
         fields = '__all__'
+class CheckBreakSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = None 
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        if isinstance(instance, CheckInAndOut):
+            return CheckInAndOutSerializer(instance).data
+        elif isinstance(instance, BreakInAndOut):
+            return BreakInAndOutSerializer(instance).data
+        return super().to_representation(instance)
