@@ -118,8 +118,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     company = models.ForeignKey(
         Company, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
 
-    location = models.ForeignKey(
-        Location, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
+    # location = models.ForeignKey(Location, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
     user_image = models.FileField(
         upload_to='user_images/', null=True, blank=True)
     is_contract_worker = models.BooleanField(
@@ -148,3 +147,12 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class UserDocument(BaseModel):
+    user = models.ForeignKey(
+        UserAccount, related_name='user_documents', on_delete=models.CASCADE)
+    document = models.FileField(upload_to='user_documents/')
+
+    def __str__(self):
+        return self.user.email

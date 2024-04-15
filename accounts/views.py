@@ -1,5 +1,8 @@
+import datetime
 from django.shortcuts import render
 # Create your views here.
+from datetime import date, datetime
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,6 +14,7 @@ from . import codeigniter_db_module
 from app_settings.models import *
 from candidate_ranking.models import *
 from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import datetime
 
 
 @api_view(['POST'])
@@ -50,7 +54,6 @@ def get_user_account(request):
 def get_user_by_id(request, user_id):
     user = UserAccount.objects.get(id=user_id)
     user_serializer = UserAccountSerializer(user)
-
     return Response({
         'user': user_serializer.data,
     })
@@ -282,13 +285,94 @@ def contract_workers(request, contract_worker_id=None):
 def create_contract_worker(request):
     if request.method == 'GET':
         agencies = Agency.objects.all()
-        locations = Location.objects.all()
+
         agency_serializer = AgencySerializer(agencies, many=True)
-        location_serializer = LocationSerializer(locations, many=True)
+
         return Response({
             'agencies': agency_serializer.data,
-            'locations': location_serializer.data
+
         })
+
     elif request.method == 'POST':
-        # Write your dummy POST logic here
-        return Response({"message": "Dummy POST logic"})
+        try:
+            data = request.data
+
+            # Extract agency and location IDs
+            agency_id = data.get('agency')
+            location_id = data.get('location')
+
+            # Retrieve agency and location objects
+            agency = get_object_or_404(Agency, id=agency_id)
+            # location = get_object_or_404(Location, id=location_id)
+
+            # Extract other fields
+            first_name = data.get('first_name')
+            last_name = data.get('last_name')
+            email = data.get('email')
+            raw_password = data.get('password')
+            emp_id = data.get('emp_id')
+            phone_number = data.get('phone_number')
+
+            aadhaar_card = data.get('aadhaar_card')
+            pan = data.get('pan')
+            dob = data.get('dob')
+            # company = data.get('company')
+
+            # Calculate age from date of birth
+            if dob:
+                dob_date = datetime.strptime(dob, '%Y-%m-%d').date()
+                today = date.today()
+                age = today.year - dob_date.year - \
+                    ((today.month, today.day) < (dob_date.month, dob_date.day))
+            else:
+                age = None
+                dob = None
+
+            print("Calculated age:", age)
+
+            # Create the UserAccount object
+            user_account = UserAccount.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                emp_id=emp_id,
+                phone_number=phone_number,
+                aadhaar_card=aadhaar_card,
+                pan=pan,
+                dob=dob,
+                age=age,
+                agency=agency,
+                is_contract_worker=True
+                # Pass any additional fields
+            )
+
+            user_account.set_password(raw_password)
+            user_account.save()
+            # Additional logic if needed
+            # Save each user image individually
+
+            # Declare user_images variable with a default value of an empty list
+            user_images = []
+
+            # Print the names of incoming images
+            print('Incoming image filenames:', [
+                  image.name for image in user_images])
+            # Retrieve uploaded images if available
+            user_images = request.FILES.getlist('user_images')
+            print('Number of user images received', len(user_images))
+
+            if len(user_images) > 0:
+                # Files are uploaded, proceed with processing them
+                for image in user_images:
+                    UserDocument.objects.create(
+                        user=user_account, document=image)
+            else:
+                # No files uploaded, handle accordingly
+                print('No user images received')
+
+            # Return a proper response with a status code
+            return Response({"message": "UserAccount created successfully"}, status=201)
+
+        except Exception as e:
+            print("Error:", e)
+            return Response({"message": "Error creating UserAccount"}, status=500)

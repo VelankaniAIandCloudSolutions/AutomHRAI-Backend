@@ -14,8 +14,22 @@ class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
                   'phone_number', 'is_superuser', 'is_staff', 'company', 'created_at', 'updated_at')
 
 
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = '__all__'
+
+
+class AgencySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Agency
+        fields = '__all__'
+
+
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
+    agency = AgencySerializer()
 
     class Meta:
         model = UserAccount
@@ -25,15 +39,3 @@ class UserAccountSerializer(serializers.ModelSerializer):
         if not obj.user_image:
             return None
         return settings.WEBSITE_URL + obj.user_image.url
-
-
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
-        fields = '__all__'
-
-
-class AgencySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Agency
-        fields = '__all__'
