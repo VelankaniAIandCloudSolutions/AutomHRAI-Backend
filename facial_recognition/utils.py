@@ -66,10 +66,8 @@ def classify_face(img, threshold=0.4):
             for face_encoding in unknown_face_encodings:
                 # Compare the encoding of the current face to the encodings of all known faces
                 face_distances = fr.face_distance(faces_encoded, face_encoding)
-                print('face_dist',face_distances)
                 # Find the closest known face
                 min_distance = min(face_distances)
-                print('min',min_distance)
                 best_match_index = np.argmin(face_distances)
 
                 # If the distance is below the threshold, consider it a match
@@ -81,7 +79,7 @@ def classify_face(img, threshold=0.4):
                 face_emails.append(email)
 
             # Return the emails of all faces in the input image
-            return face_emails[0]
+            return face_emails[0]   
         except Exception as e:
             # If no faces are found in the input image or an error occurs, return an empty list
             print(f"Error: {e}")

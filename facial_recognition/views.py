@@ -30,13 +30,14 @@ from datetime import timedelta
 
 
 from django.contrib.auth.decorators import login_required
+import uuid
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def upload_photo(request):
     if request.method == 'POST':
         photo_data = request.POST.get('photo')
-        user_id = request.POST.get('user_id')  # Get the logged-in user ID
+        # user_id = request.POST.get('user_id') or None   # Get the logged-in user ID
         check_time = timezone.now()  # Get the current time
         check_type = request.POST.get('type')  # Get the type data from the request
         
@@ -49,19 +50,21 @@ def upload_photo(request):
             path = os.path.join('media', filename)
             with open(path, 'wb') as f:
                 f.write(decoded_contentfile)
-
+            print(path)
             # Classify the face detected in the uploaded image
             detected_user = classify_face(path, 0.4)
             
             # Get the logged-in user
-            try:
-                logged_in_user = UserAccount.objects.get(id=user_id)
-            except UserAccount.DoesNotExist:
-                return JsonResponse({'error': 'Logged-in user not found'}, status=400)
+            # try:
+            #     logged_in_user = UserAccount.objects.get(id=user_id)
+            # except UserAccount.DoesNotExist:
+            #     return JsonResponse({'error': 'Logged-in user not found'}, status=400)
 
-            if detected_user == logged_in_user.email:
+            # if detected_user == logged_in_user.email:
                 # Detected user matches logged-in user
                 # Proceed with check-in or check-out process
+            if detected_user:
+                logged_in_user  =  UserAccount.objects.get(email=detected_user)
                 try:
                     if check_type == 'checkin':
                         CheckInAndOut.objects.create(
@@ -113,6 +116,53 @@ def upload_photo(request):
                 return JsonResponse({'error': 'User not detected'}, status=400)
         else:
             return JsonResponse({'error': 'No photo found in the request'}, status=400)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def mark_attendance_without_login(request):
+    if request.method == 'POST':
+        photo_data = request.POST.get('photo')
+        check_time = timezone.now()     
+        check_type = request.POST.get('type')  
+
+        if photo_data:
+            _, str_img = photo_data.split(';base64,')
+            decoded_contentfile = base64.b64decode(str_img)
+
+            unique_filename = timezone.now().strftime("%Y%m%d%H%M%S") + '_' + 'attendance.jpg'
+            path = os.path.join('media', unique_filename)
+            with open(path, 'wb') as f:
+                f.write(decoded_contentfile)
+            detected_user_email = classify_face(path, 0.4)
+
+            if detected_user_email: 
+                detected_user  =  UserAccount.objects.get(email=detected_user_email)
+                try:
+                    if check_type == 'checkin':
+                        CheckInAndOut.objects.create(
+                            type=check_type,
+                            user=detected_user,
+                            image=path,
+                            created_at=check_time
+                        )
+                        return Response({'message': f'Check-in successful for user: {detected_user.email}'})
+                    elif check_type == 'checkout':
+                        CheckInAndOut.objects.create(
+                            type=check_type,
+                            user=detected_user,
+                            image=path,
+                            created_at=check_time
+                        )
+
+                        return Response({'message': f'Check-out successful for user: {detected_user.email}'})
+                    else:
+                        return Response({'error': 'Invalid type provided'}, status=400)
+                except Exception as e:
+                    return Response({'error': str(e)}, status=400)
+            else:
+                return Response({'error': 'User not detected'}, status=400)
+        else:
+            return Response({'error': 'No photo found in the request'}, status=400)
 
 
 
