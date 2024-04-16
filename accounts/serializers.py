@@ -6,6 +6,7 @@ from django.conf import settings
 
 User = get_user_model()
 
+
 class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
     class Meta(djoser_serializers.UserCreateSerializer.Meta):
         model = User
