@@ -39,3 +39,18 @@ class UserAccountSerializer(serializers.ModelSerializer):
         if not obj.user_image:
             return None
         return settings.WEBSITE_URL + obj.user_image.url
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    location = LocationSerializer()
+    category = CategorySerializer()
+
+    class Meta:
+        model = Project
+        fields = '__all__'

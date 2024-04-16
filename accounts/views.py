@@ -258,7 +258,7 @@ def check_login(request):
 
 @api_view(['GET', 'DELETE'])
 @permission_classes([])
-def contract_workers(request, contract_worker_id=None):
+def get_and_delete_contract_workers(request, contract_worker_id=None):
     if request.method == 'GET':
         # Retrieve all contract workers
         contract_workers = UserAccount.objects.filter(is_contract_worker=True)
@@ -376,3 +376,61 @@ def create_contract_worker(request):
         except Exception as e:
             print("Error:", e)
             return Response({"message": "Error creating UserAccount"}, status=500)
+
+
+@api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([])
+def get_delete_and_create_projects(request, project_id=None):
+    if request.method == 'GET':
+        # Retrieve all projects, locations, and categories
+        projects = Project.objects.all()
+        locations = Location.objects.all()
+        categories = Category.objects.all()
+        project_serializer = ProjectSerializer(projects, many=True)
+        location_serializer = LocationSerializer(locations, many=True)
+        category_serializer = CategorySerializer(categories, many=True)
+        data = {
+            "projects": project_serializer.data,
+            "locations": location_serializer.data,
+            "categories": category_serializer.data
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+    elif request.method == 'POST':
+        # Create a new project
+        try:
+            name = request.data.get('name')
+            location_id = request.data.get('location')
+            category_id = request.data.get('category')
+
+            # Retrieve location and category objects
+            location = Location.objects.get(id=location_id)
+            category = Category.objects.get(id=category_id)
+
+            # Create the project
+            project = Project.objects.create(
+                name=name,
+                location=location,
+                category=category
+            )
+
+            # Serialize the created project
+            project_serializer = ProjectSerializer(project)
+
+            return Response(project_serializer.data, status=status.HTTP_201_CREATED)
+        except Location.DoesNotExist:
+            return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    elif request.method == 'DELETE':
+        # Delete project by ID
+        try:
+            if project_id:
+                project = Project.objects.get(id=project_id)
+                project.delete()
+                return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Project ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
