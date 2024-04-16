@@ -5,12 +5,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.shortcuts import get_object_or_404
-from .serializers import UserAccountSerializer, UserCreateSerializer
-from .models import UserAccount , Company
+from .serializers import UserAccountSerializer, UserCreateSerializer, AgencySerializer
+from .models import UserAccount , Company , Agency
 from . import codeigniter_db_module
 from app_settings.models import *
 from candidate_ranking.models import *
 from rest_framework_simplejwt.tokens import RefreshToken
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -179,6 +180,41 @@ def delete_user(request, user_id):
 def check_login(request):
     print(request.user)
     return Response(data={'test':'test'},status=status.HTTP_200_OK)
+
+@api_view(['GET' ,'POST'])
+def agency_list(request):
+    if request.method == 'GET':
+        agencies = Agency.objects.all()
+        serializer = AgencySerializer(agencies, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        name = request.data.get('name')
+        agency_owner = request.data.get('ownerName')
+        gst = request.data.get('gst')
+        labour_license = request.FILES.get('labourLicense')
+        pan = request.FILES.get('pan')
+        wcp = request.FILES.get('wcp')
+        
+        agency = Agency.objects.create(
+            name=name,
+            agency_owner = agency_owner,
+            gst = gst,
+            labour_license = labour_license,
+            pan = pan,
+            wcp = wcp
+        )
+        serializer = AgencySerializer(agency)
+        
+        return Response({'message': 'Agency created successfully', 'data': serializer.data})
+    
+@api_view(['DELETE'])
+def delete_agency(request, agency_id):
+    
+    agency = Agency.objects.get(id=agency_id)
+    agency.delete()
+    return Response({'message': 'Agency deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    
 
 # @api_view(['GET'])
 # @permission_classes([AllowAny])
