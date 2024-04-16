@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from django.shortcuts import get_object_or_404
-from .serializers import UserAccountSerializer, UserCreateSerializer
-from .models import UserAccount , Company
+from .serializers import UserAccountSerializer, UserCreateSerializer , LocationSerializer , CategorySerializer
+from .models import UserAccount , Company , Location , Category
 from . import codeigniter_db_module
 from app_settings.models import *
 from candidate_ranking.models import *
@@ -105,6 +105,68 @@ def create_user(request):
         return Response({'message': 'UserAccount created successfully', 'user_id': user.id})
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([AllowAny])
+def create_or_get_location(request):
+    if request.method == 'POST':
+        try:
+            location_data = request.data.get('location')
+            location = Location.objects.create(name=location_data)
+            serializer = LocationSerializer(location)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'GET':
+        locations = Location.objects.all()
+        serializer = LocationSerializer(locations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_location(request, location_id):
+    try:
+        location = Location.objects.get(pk=location_id)
+        location.delete()
+        return Response({'message': 'Location deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Location.DoesNotExist:
+        return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['POST', 'GET'])
+@permission_classes([AllowAny])
+def create_or_get_category(request):
+    if request.method == 'POST':
+        try:
+            category_data = request.data.get('category')
+            category = Category.objects.create(name=category_data)
+            serializer = CategorySerializer(category)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'GET':
+        categories = Category.objects.all()
+        serializer = CategorySerializer(categories, many=True)
+
+        print("categories" , categories)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])
+def delete_category(request, category_id):
+    try:
+        category = Category.objects.get(pk=category_id)
+        category.delete()
+        return Response({'message': 'Location deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Location.DoesNotExist:
+        return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @api_view(['PUT'])
