@@ -15,6 +15,12 @@ urlpatterns = [
     # path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'), 
     # path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'), 
     # path('import-jobs-from-automhr/', import_jobs_from_automhr,name='import_jobs_from_automhr'), 
+
+    path('locations/create/', create_or_get_location, name='create_or_get_location'),
+    path('locations/delete/<int:location_id>/' , delete_location , name = 'delete_location' ),
+    path('categories/create/', create_or_get_category, name='create_or_get_category'),
+    path('categories/delete/<int:category_id>/' , delete_category , name = 'delete_category' ),
+    
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
