@@ -354,9 +354,6 @@ def create_contract_worker(request):
             # Declare user_images variable with a default value of an empty list
             user_images = []
 
-            # Print the names of incoming images
-            print('Incoming image filenames:', [
-                  image.name for image in user_images])
             # Retrieve uploaded images if available
             user_images = request.FILES.getlist('user_images')
             print('Number of user images received', len(user_images))
@@ -366,6 +363,9 @@ def create_contract_worker(request):
                 for image in user_images:
                     UserDocument.objects.create(
                         user=user_account, document=image)
+
+                user_account.user_image = user_images[0]
+                user_account.save()  # Save the changes to the user account
             else:
                 # No files uploaded, handle accordingly
                 print('No user images received')
@@ -414,10 +414,10 @@ def get_delete_and_create_projects(request, project_id=None):
                 category=category
             )
 
-            # Serialize the created project
-            project_serializer = ProjectSerializer(project)
+            all_projects = Project.objects.all()
+            project_serializer = ProjectSerializer(all_projects, many=True)
 
-            return Response(project_serializer.data, status=status.HTTP_201_CREATED)
+            return Response({"projects": project_serializer.data}, status=status.HTTP_201_CREATED)
         except Location.DoesNotExist:
             return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
         except Category.DoesNotExist:
