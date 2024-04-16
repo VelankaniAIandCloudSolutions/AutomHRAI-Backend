@@ -26,6 +26,17 @@ class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
         fields = '__all__'
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = '__all__'
+class ProjectSerializer(serializers.ModelSerializer):
+    category  = CategorySerializer()
+    location = LocationSerializer()
+    class Meta:
+        model = Project
+        fields = '__all__'
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
     full_name  = serializers.SerializerMethodField()

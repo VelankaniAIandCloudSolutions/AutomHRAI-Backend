@@ -27,10 +27,10 @@ from .models import CheckInAndOut
 from django.db.models import F, ExpressionWrapper, fields
 from django.db.models import Sum
 import datetime
-
+from rest_framework import status
 from django.contrib.auth.decorators import login_required
 import uuid
-
+import json
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def upload_photo(request):
@@ -459,7 +459,10 @@ def mark_attendance_without_login(request):
         photo_data = request.POST.get('photo')
         check_time = timezone.now()     
         check_type = request.POST.get('type')  
-
+        if request.user.location:
+            location = request.user.location
+        else:
+            location = None
         if photo_data:
             _, str_img = photo_data.split(';base64,')
             decoded_contentfile = base64.b64decode(str_img)
@@ -484,7 +487,8 @@ def mark_attendance_without_login(request):
                                 type=check_type,
                                 user=detected_user,
                                 image=path,
-                                created_at=check_time
+                                created_at=check_time,
+                                location=location
                             )
                             return Response({'message': f'Check-in successful for user: {full_name}'})
                         elif check_type == 'checkout':
@@ -492,7 +496,8 @@ def mark_attendance_without_login(request):
                                 type=check_type,
                                 user=detected_user,
                                 image=path,
-                                created_at=check_time
+                                created_at=check_time,
+                                location=location
                             )
                             return Response({'message': f'Check-out successful for user: {full_name}'})
                         elif check_type == 'breakin':
@@ -500,7 +505,8 @@ def mark_attendance_without_login(request):
                                 type=check_type,
                                 user=detected_user,
                                 image=path,
-                                created_at=check_time
+                                created_at=check_time,
+                                location=location
                             )
                             return Response({'message': f'Break-in successful for user: {full_name}'})
                         elif check_type == 'breakout':
@@ -508,7 +514,8 @@ def mark_attendance_without_login(request):
                                 type=check_type,
                                 user=detected_user,
                                 image=path,
-                                created_at=check_time
+                                created_at=check_time,
+                                location=location
                             )
                             return Response({'message': f'Break-out successful for user: {full_name}'})
                         else:
@@ -543,5 +550,49 @@ def get_contract_worker_attendance(request):
         all_entries.extend(sorted_user_entries)
 
     entry_serializer = CheckBreakSerializer(all_entries, many=True) 
-    
-    return Response({'checks_breaks':entry_serializer.data})
+    projects = Project.objects.all()
+    projects_serializer = ProjectSerializer(projects, many=True)
+    return Response({'checks_breaks':entry_serializer.data, 'projects': projects_serializer.data})
+
+
+
+@api_view(['POST'])
+def assign_project(request):
+    if request.method == 'POST':
+        project_id = request.data.get('project_id')
+        attendance_entries = json.loads(request.data.get('selected_attendance_entries'))
+
+        if not project_id:
+            return Response({'error': 'Project ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not attendance_entries or not isinstance(attendance_entries, list):
+            return Response({'error': 'Selected attendance entries data is missing or invalid'}, status=status.HTTP_400_BAD_REQUEST)
+        check_in_outs = []
+        break_in_outs = []
+
+        try:
+            for item in attendance_entries:
+                if item['type'] == 'Check In' or item['type'] == 'Check Out':
+                    check_in_outs.append(item)
+                elif item['type'] == 'Break In' or item['type'] == 'Break Out':
+                    break_in_outs.append(item)
+
+            for item in check_in_outs:
+                check_in_out = CheckInAndOut.objects.get(id=item['id'])
+                check_in_out.project = Project.objects.get(id=project_id)
+                check_in_out.save()
+
+            for item in break_in_outs:
+                break_in_out = BreakInAndOut.objects.get(id=item['id'])
+                break_in_out.project = Project.objects.get(id=project_id)
+                break_in_out.save()
+
+            return Response({'message': 'Project assigned successfully'}, status=status.HTTP_200_OK)
+        except CheckInAndOut.DoesNotExist:
+            return Response({'error': 'One or more check in/out entries not found'}, status=status.HTTP_404_NOT_FOUND)
+        except BreakInAndOut.DoesNotExist:
+            return Response({'error': 'One or more break in/out entries not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Project.DoesNotExist:
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

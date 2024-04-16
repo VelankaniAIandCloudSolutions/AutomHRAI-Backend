@@ -11,13 +11,14 @@ class CheckInAndOutSerializer(serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(format='%d/%m/%Y %I:%M %p')
     location = LocationSerializer()
+    project  = ProjectSerializer()
     class Meta:
         model = CheckInAndOut
         fields = '__all__'
 
     def get_image(self,obj):
         if(obj.image):
-            return settings.WEBSITE_URL + '/media/' + str(obj.image)
+            return settings.WEBSITE_URL  +  '/' +  str(obj.image)
         else:
             return ''
     
@@ -34,13 +35,16 @@ class BreakInAndOutSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(format='%d/%m/%Y %I:%M %p')
     location = LocationSerializer()
+    type = serializers.SerializerMethodField()
+    project  = ProjectSerializer()
+
     class Meta:
         model = BreakInAndOut
         fields = '__all__'
 
     def get_image(self,obj):
         if(obj.image):
-            return settings.WEBSITE_URL + '/media/' + str(obj.image)
+            return settings.WEBSITE_URL + '/' + str(obj.image)
         else:
             return ''
         
@@ -50,6 +54,7 @@ class BreakInAndOutSerializer(serializers.ModelSerializer):
 
         elif(obj.type == 'breakout'):
             return 'Break Out'
+        
 class TimeSheetSerializer(serializers.ModelSerializer):
     user = UserAccountSerializer()
    
