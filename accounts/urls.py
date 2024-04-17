@@ -20,7 +20,7 @@ urlpatterns = [
     path('projects/delete/<int:project_id>/', views.get_delete_and_create_projects),
     path('projects/create/', views.get_delete_and_create_projects),
     path('agency_list/', agency_list , name='agency_list'),
-    path('delete_agency/', delete_agency, name='delete_agency'),
+    path('delete_agency/<int:agency_id>/', delete_agency, name='delete_agency'),
     path('locations/create/', create_or_get_location, name='create_or_get_location'),
     path('locations/delete/<int:location_id>/' , delete_location , name = 'delete_location' ),
     path('categories/create/', create_or_get_category, name='create_or_get_category'),
