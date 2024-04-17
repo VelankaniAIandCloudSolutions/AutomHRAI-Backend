@@ -121,7 +121,8 @@ def create_or_get_location(request):
     if request.method == 'POST':
         try:
             location_data = request.data.get('location')
-            location = Location.objects.create(name=location_data)
+            user_company = request.user.company if hasattr(request.user, 'company') else None
+            location = Location.objects.create(name=location_data ,  company=user_company )
             serializer = LocationSerializer(location)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -142,6 +143,24 @@ def delete_location(request, location_id):
         return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_location(request, location_id):
+    try:
+        location = Location.objects.get(pk=location_id)
+        request_data = request.data.copy()
+        request_data.pop('company', None)
+        serializer = LocationSerializer(location, data=request_data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Location.DoesNotExist:
+        return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -174,6 +193,24 @@ def delete_category(request, category_id):
         return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PUT'])
+@permission_classes([AllowAny])
+def update_category(request, category_id):
+    try:
+        category = Category.objects.get(pk=category_id)
+        request_data = request.data.copy()
+        
+        serializer = CategorySerializer(category, data=request_data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Location.DoesNotExist:
+        return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
