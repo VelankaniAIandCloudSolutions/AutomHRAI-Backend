@@ -250,33 +250,6 @@ def check_login(request):
     print(request.user)
     return Response(data={'test': 'test'}, status=status.HTTP_200_OK)
 
-@api_view(['GET' ,'POST'])
-def agency_list(request):
-    if request.method == 'GET':
-        agencies = Agency.objects.all()
-        serializer = AgencySerializer(agencies, many=True)
-        return Response(serializer.data)
-
-    elif request.method == 'POST':
-        name = request.data.get('name')
-        agency_owner = request.data.get('ownerName')
-        gst = request.data.get('gst')
-        labour_license = request.FILES.get('labourLicense')
-        pan = request.FILES.get('pan')
-        wcp = request.FILES.get('wcp')
-        
-        agency = Agency.objects.create(
-            name=name,
-            agency_owner = agency_owner,
-            gst = gst,
-            labour_license = labour_license,
-            pan = pan,
-            wcp = wcp
-        )
-        serializer = AgencySerializer(agency)
-        
-        return Response({'message': 'Agency created successfully', 'data': serializer.data})
-    
 @api_view(['DELETE'])
 def delete_agency(request, agency_id):
     
