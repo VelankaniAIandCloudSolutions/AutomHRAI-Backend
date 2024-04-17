@@ -54,6 +54,7 @@ class UserAccountManager(BaseUserManager):
 class Agency(BaseModel):
 
     name = models.CharField(max_length=255)
+    agency_id = models.CharField(max_length=10,unique=True)
     agency_owner = models.CharField(max_length=255, blank=True, null=True)
     gst = models.CharField(max_length=255, blank=True, null=True)
     labour_license = models.FileField(
@@ -70,6 +71,12 @@ class Agency(BaseModel):
 class Category(BaseModel):
     name = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.name
+    
+class SubCategory(BaseModel):
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(Category, related_name='sub_categories', on_delete=models.CASCADE, null=True)
     def __str__(self):
         return self.name
 
@@ -127,6 +134,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     pan = models.FileField(upload_to='user_files/', null=True, blank=True)
     mobile = models.CharField(max_length = 255 , blank = True , null = True)
     location = models.ForeignKey(Location , related_name = 'user_accounts' , on_delete=models.SET_NULL , null = True, blank = True)
+    sub_category = models.ForeignKey(SubCategory, related_name = 'user_accounts', on_delete=models.SET_NULL, null = True, blank = True)
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
