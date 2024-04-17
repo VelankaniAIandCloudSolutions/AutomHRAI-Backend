@@ -14,21 +14,30 @@ urlpatterns = [
     path('users/delete/<int:user_id>/', delete_user, name='delete_user'),
     path('get-user-account/', get_user_account, name='get_user_account'),
     path('contract-workers/', get_and_delete_contract_workers),
-    path('contract-workers/delete/<int:contract_worker_id>/',get_and_delete_contract_workers),
+    path('contract-workers/delete/<int:contract_worker_id>/',
+         get_and_delete_contract_workers),
     path('contract-workers/create/', views.create_contract_worker),
     path('projects/', views.get_delete_and_create_projects),
-    path('projects/delete/<int:project_id>/', views.get_delete_and_create_projects),
+    path('projects/delete/<int:project_id>/',
+         views.get_delete_and_create_projects),
     path('projects/create/', views.get_delete_and_create_projects),
-    path('agency_list/', agency_list , name='agency_list'),
+    path('agency_list/', agency_list, name='agency_list'),
     path('delete_agency/', delete_agency, name='delete_agency'),
-    path('locations/create/', create_or_get_location, name='create_or_get_location'),
-    path('locations/delete/<int:location_id>/' , delete_location , name = 'delete_location' ),
-    path('categories/create/', create_or_get_category, name='create_or_get_category'),
-    path('categories/delete/<int:category_id>/' , delete_category , name = 'delete_category' ),
+    path('locations/create/', create_or_get_location,
+         name='create_or_get_location'),
+    path('locations/delete/<int:location_id>/',
+         delete_location, name='delete_location'),
+    path('categories/create/', create_or_get_category,
+         name='create_or_get_category'),
+    path('categories/delete/<int:category_id>/',
+         delete_category, name='delete_category'),
+
+
+
     # path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'),
     # path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'),
     # path('import-jobs-from-automhr/', import_jobs_from_automhr,name='import_jobs_from_automhr'),
-    
+
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

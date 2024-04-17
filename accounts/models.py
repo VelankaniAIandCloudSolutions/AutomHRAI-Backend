@@ -115,17 +115,23 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         blank=True,
         to_field='id'
     )
-    company = models.ForeignKey(Company,related_name='user_accounts',on_delete=models.CASCADE, null=True, blank=True)
-    user_image  = models.FileField(upload_to='user_images/', null=True, blank=True)
-    is_contract_worker = models.BooleanField(default = False ,  null = True , blank = True)
-    is_supervisor = models.BooleanField(default = False ,  null = True , blank = True)
-    agency = models.ForeignKey(Agency , related_name = 'user_accounts' , on_delete=models.CASCADE , null = True , blank = True)
-    dob = models.DateField(blank = True , null = True)
-    age = models.IntegerField(null = True , blank = True)
-    aadhaar_card = models.FileField(upload_to='user_files/', null=True, blank=True)
+    company = models.ForeignKey(
+        Company, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
+    user_image = models.FileField(
+        upload_to='user_images/', null=True, blank=True)
+    is_contract_worker = models.BooleanField(
+        default=False,  null=True, blank=True)
+    is_supervisor = models.BooleanField(default=False,  null=True, blank=True)
+    agency = models.ForeignKey(
+        Agency, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
+    dob = models.DateField(blank=True, null=True)
+    age = models.IntegerField(null=True, blank=True)
+    aadhaar_card = models.FileField(
+        upload_to='user_files/', null=True, blank=True)
     pan = models.FileField(upload_to='user_files/', null=True, blank=True)
-    mobile = models.CharField(max_length = 255 , blank = True , null = True)
-    location = models.ForeignKey(Location , related_name = 'user_accounts' , on_delete=models.SET_NULL , null = True, blank = True)
+    mobile = models.CharField(max_length=255, blank=True, null=True)
+    location = models.ForeignKey(
+        Location, related_name='user_accounts', on_delete=models.SET_NULL, null=True, blank=True)
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
