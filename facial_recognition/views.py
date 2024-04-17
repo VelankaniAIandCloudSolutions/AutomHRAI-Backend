@@ -415,8 +415,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']
-        : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -612,12 +611,12 @@ def get_attendance_report(request):
 
         # Validate date
         if not date_str:
-            return Response({'error': 'Date is not provided but is required'}, status=400)
+            return Response({'error': 'Date is not provided but is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            return Response({'error': 'Invalid date format'}, status=400)
+            return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Get all contract worker users
         contract_workers = UserAccount.objects.filter(is_contract_worker=True)
@@ -628,7 +627,7 @@ def get_attendance_report(request):
             user_serializer = UserAccountSerializer(user)
 
             user_data = {
-                'user': user_serializer.data,
+                'user_info': user_serializer.data,
                 'work_time': None,
                 'break_time': None,
                 'entries': []
@@ -692,4 +691,4 @@ def get_attendance_report(request):
 
             response_data.append(user_data)
 
-        return Response(response_data)
+        return Response({'user_data': response_data}, status=status.HTTP_200_OK)
