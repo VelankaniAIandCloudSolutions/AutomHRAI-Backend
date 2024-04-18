@@ -1,169 +1,143 @@
-import face_recognition as fr
+#using deep learning and more accuracy but slower, works best with gpu
+################################################
+# from facenet_pytorch import MTCNN, InceptionResnetV1
+# from PIL import Image
+# from numpy.linalg import norm
+# import numpy as np
+
+# # Initialize models
+# mtcnn = MTCNN(image_size=160)
+# resnet = InceptionResnetV1(pretrained='vggface2').eval()
+
+# def get_encoded_faces():
+#     from .models import UserAccount  # Import here to avoid circular imports
+#     user_accounts = UserAccount.objects.filter(is_contract_worker = True)
+#     encoded = {}
+
+#     for user_account in user_accounts:
+#         encoding = None
+#         if user_account.user_image:
+#             try:
+#                 img = Image.open(user_account.user_image.path)
+#                 img_cropped = mtcnn(img)
+                
+#                 if img_cropped is not None:
+#                     encoding = resnet(img_cropped.unsqueeze(0))
+#                     encoding = encoding.detach().numpy()
+
+#                 if encoding is not None:
+#                     encoded[user_account.email] = encoding
+#             except Exception as e:
+#                 print(f"Failed to process image for {user_account.email}: {e}")
+    
+#     return encoded
+
+# def classify_face(img_path, threshold=0.4):
+#     img = Image.open(img_path)
+#     img_cropped = mtcnn(img)
+#     if img_cropped is None:
+#         return "No face detected"
+
+#     encoding = resnet(img_cropped.unsqueeze(0))
+#     encoding = encoding.detach().numpy()
+
+#     known_faces = get_encoded_faces()
+
+#     if not known_faces:
+#         print("No known faces available for comparison.")
+#         return "No known faces to compare with"
+
+#     known_encodings = np.array(list(known_faces.values()))
+#     known_emails = list(known_faces.keys())
+
+#     # Reshape known_encodings to ensure it's 2D
+#     known_encodings = np.squeeze(known_encodings)
+
+#     print("Encoding shape:", encoding.shape)
+#     print("Known encodings shape:", known_encodings.shape)
+
+#     distances = norm(known_encodings - encoding, axis=1)
+#     min_distance = np.min(distances)
+#     best_match_index = np.argmin(distances)
+
+#     print("Best match index:", best_match_index)
+#     print("Known emails:", known_emails)
+#     print("Distance:", min_distance)
+
+#     if best_match_index >= len(known_emails):
+#         print("Index out of range error.")
+#         return "Index out of range"
+
+#     if min_distance < threshold:
+#         return known_emails[best_match_index]
+#     else:
+#         return "Unknown"
+
+
+#using simple face recognition library less acurate but faster 
+################################################
+
+
+import face_recognition
+from PIL import Image
 import numpy as np
-
-
-from accounts.models import UserAccount
-
-
-def is_ajax(request):
-    return request.headers.get('x-requested-with') == 'XMLHttpRequest'
-
 
 def get_encoded_faces():
     """
-    This function loads all user account images and encodes their faces
+    This function loads all user account images and encodes their faces with optimizations for image size and detection parameters.
     """
-    # Retrieve all user accounts from the database
+    from .models import UserAccount
     user_accounts = UserAccount.objects.all()
-
-    # Create a dictionary to hold the encoded face for each user account
     encoded = {}
 
     for user_account in user_accounts:
-        # Initialize the encoding variable with None
         encoding = None
-
-        # Load the user account image
         if user_account.user_image:
-            face = fr.load_image_file(user_account.user_image.path)
+            # Load the image and resize it to reduce processing time
+            img = face_recognition.load_image_file(user_account.user_image.path)
+            # small_img = np.array(Image.fromarray(img).resize((0.5 * img.shape[1], 0.5 * img.shape[0])))
+            small_img = np.array(Image.fromarray(img).resize((int(0.5 * img.shape[1]), int(0.5 * img.shape[0]))))
+            # Optionally use CNN model for more accurate face detection (slower)
+            face_locations = face_recognition.face_locations(small_img, model='hog')  # Change to 'cnn' for more accuracy, hog for faster
+            face_encodings = face_recognition.face_encodings(small_img, face_locations, num_jitters=1)  # Reduced jitters
 
-            # Encode the face (if detected)
-            face_encodings = fr.face_encodings(face)
-            if len(face_encodings) > 0:
+            if face_encodings:
                 encoding = face_encodings[0]
-            else:
-                print("No face found in the image")
-                
-            # Add the user account's encoded face to the dictionary if encoding is not None
+
             if encoding is not None:
                 encoded[user_account.email] = encoding
+            else:
+                print("No face found in the image")
 
-    # Return the dictionary of encoded faces
     return encoded
 
+def classify_face(img_path, threshold=0.4):
+    img = face_recognition.load_image_file(img_path)
 
-def classify_face(img, threshold=0.4):
-        """
-        This function takes an image as input and returns the email of the user account it contains
-        """
-        # Load all the known faces and their encodings
-        faces = get_encoded_faces()
-        faces_encoded = list(faces.values())
-        known_face_emails = list(faces.keys())
+    # Convert floating point calculations to integer for dimensions
+    width, height = img.shape[1], img.shape[0]
+    new_width = int(width * 0.5)
+    new_height = int(height * 0.5)
 
-        # Load the input image
-        img = fr.load_image_file(img)
+    # Resize the image using integer dimensions
+    small_img = np.array(Image.fromarray(img).resize((new_width, new_height)))
 
-        try:
-            # Find the locations of all faces in the input image
-            face_locations = fr.face_locations(img)
+    # Proceed with face detection
+    face_locations = face_recognition.face_locations(small_img, model='hog')  # Change to 'cnn' for more accuracy, hog for faster
+    unknown_face_encodings = face_recognition.face_encodings(small_img, face_locations)
 
-            # Encode the faces in the input image
-            unknown_face_encodings = fr.face_encodings(img, face_locations)
+    known_faces = get_encoded_faces()
+    faces_encoded = list(known_faces.values())
+    known_face_emails = list(known_faces.keys())
+ 
+    for face_encoding in unknown_face_encodings:
+        face_distances = face_recognition.face_distance(faces_encoded, face_encoding)
+        min_distance = min(face_distances)
+        best_match_index = np.argmin(face_distances)
 
-            # Identify the faces in the input image
-            face_emails = []
-            for face_encoding in unknown_face_encodings:
-                # Compare the encoding of the current face to the encodings of all known faces
-                face_distances = fr.face_distance(faces_encoded, face_encoding)
-                # Find the closest known face
-                min_distance = min(face_distances)
-                best_match_index = np.argmin(face_distances)
+        if min_distance < threshold:
+            return known_face_emails[best_match_index]
+        else:
+            return "Unknown"
 
-                # If the distance is below the threshold, consider it a match
-                if min_distance < threshold:
-                    email = known_face_emails[best_match_index]
-                else:
-                    email = "Unknown"
-
-                face_emails.append(email)
-
-            # Return the emails of all faces in the input image
-            return face_emails[0]   
-        except Exception as e:
-            # If no faces are found in the input image or an error occurs, return an empty list
-            print(f"Error: {e}")
-            return False
-
-
-
-# def classify_face(img):
-#     """
-#     This function takes an image as input and returns the email of the user account it contains
-#     """
-#     # Load all the known faces and their encodings
-#     faces = get_encoded_faces()
-#     faces_encoded = list(faces.values())
-#     known_face_emails = list(faces.keys())
-
-#     # Load the input image
-#     img = fr.load_image_file(img)
-
-#     try:
-#         # Find the locations of all faces in the input image
-#         face_locations = fr.face_locations(img)
-
-#         # Encode the faces in the input image
-#         unknown_face_encodings = fr.face_encodings(img, face_locations)
-
-#         # Identify the faces in the input image
-#         face_emails = []
-#         for face_encoding in unknown_face_encodings:
-#             # Compare the encoding of the current face to the encodings of all known faces
-#             matches = fr.compare_faces(faces_encoded, face_encoding)
-
-#             # Find the known face with the closest encoding to the current face
-#             face_distances = fr.face_distance(faces_encoded, face_encoding)
-#             best_match_index = np.argmin(face_distances)
-
-#             # If the closest known face is a match for the current face, label the face with the known email
-#             if matches[best_match_index]:
-#                 email = known_face_emails[best_match_index]
-#             else:
-#                 email = "Unknown"
-
-#             face_emails.append(email)
-#             print(face_emails)
-#         # Return the email of the first face in the input image
-#         return face_emails[0]
-#     except:
-#         # If no faces are found in the input image or an error occurs, return False
-#         return False
-
-
-
-
-
-
-
-
-# views.py code 
-
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def upload_photo(request):
-#     if request.method == 'POST':
-#         photo_data = request.POST.get('photo')
-#         if photo_data:
-#             # Splitting the data to separate the base64 header from the actual encoded image data
-#             _, str_img = photo_data.split(';base64,')
-#             decoded_contentfile = base64.b64decode(str_img)
-
-#             filename = 'upload.png'  
-#             path = os.path.join('media', filename)  
-#             with open(path, 'wb') as f:
-#                 f.write(decoded_contentfile)
-
-#             print(path)
-
-#             # Classify the face detected in the uploaded image
-#             detected_user = classify_face(path)
-#             if detected_user:
-#                 # Check if the detected user exists
-#                 user_exists = UserAccount.objects.filter(email=detected_user).exists()
-#                 if user_exists:
-#                     user = UserAccount.objects.get(email=detected_user)
-                  
-#                     return JsonResponse({'message': f'Photo received and processed successfully. Detected user: {detected_user}'})
-#             return JsonResponse({'error': 'Detected user not found or does not exist'}, status=400)
-#         return JsonResponse({'error': 'No photo found in the request'}, status=400)
+    return "No faces detected"

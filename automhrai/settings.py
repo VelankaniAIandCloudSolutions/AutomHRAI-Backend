@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'resume_parser',
     'app_settings',
     'corsheaders',
+    'django_celery_results',
 ]
 
 # REST_FRAMEWORK = {
@@ -172,3 +173,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 MEDIA_URL = '/media/'
 
 WEBSITE_URL = 'http://localhost:8000'
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'django-db'

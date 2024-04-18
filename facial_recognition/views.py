@@ -474,6 +474,7 @@ def mark_attendance_without_login(request):
             detected_user_email = classify_face(path, 0.4)
 
             if detected_user_email: 
+                print(detected_user_email)
                 try:
                     detected_user  =  UserAccount.objects.get(email=detected_user_email)
                     try:

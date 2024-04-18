@@ -98,3 +98,11 @@ weasel==0.3.4
 xlrd==1.2.0
 XlsxWriter==3.2.0
 zipp==3.17.0
+
+
+#celery
+# redis
+# facenet_pytorch
+# torch
+# django-celery-results
+#Django - 4.2.11
