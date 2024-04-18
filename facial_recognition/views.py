@@ -415,7 +415,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -474,7 +474,7 @@ def mark_attendance_without_login(request):
                 f.write(decoded_contentfile)
             detected_user_email = classify_face(path, 0.4)
 
-            if detected_user_email: 
+            if detected_user_email:
                 print(detected_user_email)
                 try:
                     detected_user = UserAccount.objects.get(
@@ -682,13 +682,13 @@ def get_attendance_report(request):
                     user_data['break_time'] = break_hours
 
             # Get all entries
-            entries = list(checkins) + list(checkouts) + \
-                list(breakins) + list(breakouts)
-            sorted_entries = sorted(
-                entries, key=lambda entry: entry.created_at)
+                entries = list(checkins) + list(checkouts) + \
+                    list(breakins) + list(breakouts)
+                sorted_entries = sorted(
+                    entries, key=lambda entry: entry.created_at)
 
-            user_data['entries'] = CheckBreakSerializer(
-                sorted_entries, many=True).data
+                user_data['entries'] = CheckBreakSerializer(
+                    sorted_entries, many=True).data
 
             response_data.append(user_data)
 

@@ -122,8 +122,10 @@ def create_or_get_location(request):
     if request.method == 'POST':
         try:
             location_data = request.data.get('location')
-            user_company = request.user.company if hasattr(request.user, 'company') else None
-            location = Location.objects.create(name=location_data ,  company=user_company )
+            user_company = request.user.company if hasattr(
+                request.user, 'company') else None
+            location = Location.objects.create(
+                name=location_data,  company=user_company)
             serializer = LocationSerializer(location)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -146,6 +148,7 @@ def delete_location(request, location_id):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def update_location(request, location_id):
@@ -153,7 +156,8 @@ def update_location(request, location_id):
         location = Location.objects.get(pk=location_id)
         request_data = request.data.copy()
         request_data.pop('company', None)
-        serializer = LocationSerializer(location, data=request_data, partial=True)
+        serializer = LocationSerializer(
+            location, data=request_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -163,7 +167,6 @@ def update_location(request, location_id):
         return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 @api_view(['POST', 'GET'])
@@ -197,14 +200,16 @@ def delete_category(request, category_id):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def update_category(request, category_id):
     try:
         category = Category.objects.get(pk=category_id)
         request_data = request.data.copy()
-        
-        serializer = CategorySerializer(category, data=request_data, partial=True)
+
+        serializer = CategorySerializer(
+            category, data=request_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -214,7 +219,6 @@ def update_category(request, category_id):
         return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 @api_view(['PUT'])
@@ -289,6 +293,7 @@ def delete_user(request, user_id):
 def check_login(request):
     print(request.user)
     return Response(data={'test': 'test'}, status=status.HTTP_200_OK)
+
 
 @api_view(['DELETE'])
 def delete_agency(request, agency_id):
@@ -581,3 +586,58 @@ def get_delete_and_create_projects(request, project_id=None):
                 return Response({"error": "Project ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([])
+def get_delete_and_create_subcategories(request, subcategory_id=None):
+    if request.method == 'GET':
+        # Retrieve all subcategories
+        categories = Category.objects.all()
+        category_serializer = CategorySerializer(categories, many=True)
+        subcategories = SubCategory.objects.all()
+        subcategory_serializer = SubCategorySerializer(
+            subcategories, many=True)
+        data = {
+            "categories": category_serializer.data,
+            "subCategories": subcategory_serializer.data
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+    elif request.method == 'POST':
+        # Create a new subcategory
+        try:
+            name = request.data.get('name')
+            category_id = request.data.get('categoryId')
+            category = Category.objects.get(id=category_id)
+            # You may have additional fields to extract from the request data
+
+            # Create the subcategory
+            subcategory = SubCategory.objects.create(
+                name=name,
+                category=category,
+                # Pass additional fields as needed
+            )
+
+            all_subcategories = SubCategory.objects.all()
+            subcategory_serializer = SubCategorySerializer(
+                all_subcategories, many=True)
+
+            return Response(subcategory_serializer.data, status=status.HTTP_201_CREATED)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        # Delete subcategory by ID
+        try:
+            if subcategory_id:
+                subcategory = SubCategory.objects.get(id=subcategory_id)
+                subcategory.delete()
+                return Response({"message": "Subcategory deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Subcategory ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
+        except SubCategory.DoesNotExist:
+            return Response({"error": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)

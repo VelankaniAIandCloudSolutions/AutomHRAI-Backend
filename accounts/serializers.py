@@ -40,6 +40,14 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class SubCategorySerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+
+    class Meta:
+        model = SubCategory
+        fields = '__all__'
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     location = LocationSerializer()
