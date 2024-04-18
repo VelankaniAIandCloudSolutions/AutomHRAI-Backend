@@ -106,3 +106,4 @@ zipp==3.17.0
 # torch
 # django-celery-results
 #Django - 4.2.11
+#django-redis

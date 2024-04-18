@@ -8,7 +8,7 @@ from rest_framework.response import Response
 
 from .utils import classify_face
 from accounts.models import UserAccount
-
+from celery.result import AsyncResult
 # Create your views here.
 
 
@@ -34,8 +34,9 @@ from django.contrib.auth.decorators import login_required
 import uuid
 import json
 from datetime import datetime
-
-
+import base64, os
+from .tasks import *
+from django.core.cache import cache
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def upload_photo(request):
@@ -452,6 +453,86 @@ def get_timesheet_data(request, user_id):
 
 #     return Response(serialized_data)
 
+# @api_view(['POST'])
+# @permission_classes([AllowAny])
+# def mark_attendance_without_login(request):
+#     if request.method == 'POST':
+#         photo_data = request.POST.get('photo')
+#         check_time = timezone.now()
+#         check_type = request.POST.get('type')
+#         if request.user.location:
+#             location = request.user.location
+#         else:
+#             location = None
+#         if photo_data:
+#             _, str_img = photo_data.split(';base64,')
+#             decoded_contentfile = base64.b64decode(str_img)
+
+#             unique_filename = timezone.now().strftime(
+#                 "%Y%m%d%H%M%S") + '_' + 'attendance.jpg'
+#             path = os.path.join('media', unique_filename)
+#             with open(path, 'wb') as f:
+#                 f.write(decoded_contentfile)
+#             detected_user_email = classify_face(path, 0.4)
+
+#             if detected_user_email: 
+#                 print(detected_user_email)
+#                 try:
+#                     detected_user = UserAccount.objects.get(
+#                         email=detected_user_email)
+#                     try:
+#                         if detected_user.last_name:
+#                             full_name = f"{detected_user.first_name} {detected_user.last_name}"
+#                         else:
+#                             full_name = detected_user.first_name
+
+#                         if check_type == 'checkin':
+#                             CheckInAndOut.objects.create(
+#                                 type=check_type,
+#                                 user=detected_user,
+#                                 image=path,
+#                                 created_at=check_time,
+#                                 location=location
+#                             )
+#                             return Response({'message': f'Check-in successful for user: {full_name}'})
+#                         elif check_type == 'checkout':
+#                             CheckInAndOut.objects.create(
+#                                 type=check_type,
+#                                 user=detected_user,
+#                                 image=path,
+#                                 created_at=check_time,
+#                                 location=location
+#                             )
+#                             return Response({'message': f'Check-out successful for user: {full_name}'})
+#                         elif check_type == 'breakin':
+#                             BreakInAndOut.objects.create(
+#                                 type=check_type,
+#                                 user=detected_user,
+#                                 image=path,
+#                                 created_at=check_time,
+#                                 location=location
+#                             )
+#                             return Response({'message': f'Break-in successful for user: {full_name}'})
+#                         elif check_type == 'breakout':
+#                             BreakInAndOut.objects.create(
+#                                 type=check_type,
+#                                 user=detected_user,
+#                                 image=path,
+#                                 created_at=check_time,
+#                                 location=location
+#                             )
+#                             return Response({'message': f'Break-out successful for user: {full_name}'})
+#                         else:
+#                             return Response({'error': 'Invalid type provided'}, status=400)
+#                     except Exception as e:
+#                         return Response({'error': str(e)}, status=400)
+#                 except UserAccount.DoesNotExist:
+#                     return Response({'message': 'User not found'}, status=404)
+#             else:
+#                 return Response({'error': 'User not detected'}, status=400)
+#         else:
+#             return Response({'error': 'No photo found in the request'}, status=400)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def mark_attendance_without_login(request):
@@ -459,79 +540,82 @@ def mark_attendance_without_login(request):
         photo_data = request.POST.get('photo')
         check_time = timezone.now()
         check_type = request.POST.get('type')
-        if request.user.location:
-            location = request.user.location
-        else:
-            location = None
+        location_id = request.user.location.id if request.user.location else None
         if photo_data:
             _, str_img = photo_data.split(';base64,')
             decoded_contentfile = base64.b64decode(str_img)
 
-            unique_filename = timezone.now().strftime(
-                "%Y%m%d%H%M%S") + '_' + 'attendance.jpg'
-            path = os.path.join('media', unique_filename)
-            with open(path, 'wb') as f:
+            unique_filename = timezone.now().strftime("%Y%m%d%H%M%S") + '_' + 'attendance.jpg'
+            img_path = os.path.join('media', unique_filename)
+            with open(img_path, 'wb') as f:
                 f.write(decoded_contentfile)
-            detected_user_email = classify_face(path, 0.4)
 
-            if detected_user_email: 
-                print(detected_user_email)
-                try:
-                    detected_user = UserAccount.objects.get(
-                        email=detected_user_email)
-                    try:
-                        if detected_user.last_name:
-                            full_name = f"{detected_user.first_name} {detected_user.last_name}"
-                        else:
-                            full_name = detected_user.first_name
+            cache_key = f"attendance_data_{unique_filename}"
+            cache.set(cache_key, {'type': check_type, 'location_id': location_id, 'img_path': img_path}, timeout=600) 
+            task = async_classify_face.delay(img_path, 0.4)
+            return Response({'task_id': task.id, 'status': 'Processing', 'cache_key': cache_key})
 
-                        if check_type == 'checkin':
-                            CheckInAndOut.objects.create(
-                                type=check_type,
-                                user=detected_user,
-                                image=path,
-                                created_at=check_time,
-                                location=location
-                            )
-                            return Response({'message': f'Check-in successful for user: {full_name}'})
-                        elif check_type == 'checkout':
-                            CheckInAndOut.objects.create(
-                                type=check_type,
-                                user=detected_user,
-                                image=path,
-                                created_at=check_time,
-                                location=location
-                            )
-                            return Response({'message': f'Check-out successful for user: {full_name}'})
-                        elif check_type == 'breakin':
-                            BreakInAndOut.objects.create(
-                                type=check_type,
-                                user=detected_user,
-                                image=path,
-                                created_at=check_time,
-                                location=location
-                            )
-                            return Response({'message': f'Break-in successful for user: {full_name}'})
-                        elif check_type == 'breakout':
-                            BreakInAndOut.objects.create(
-                                type=check_type,
-                                user=detected_user,
-                                image=path,
-                                created_at=check_time,
-                                location=location
-                            )
-                            return Response({'message': f'Break-out successful for user: {full_name}'})
-                        else:
-                            return Response({'error': 'Invalid type provided'}, status=400)
-                    except Exception as e:
-                        return Response({'error': str(e)}, status=400)
-                except UserAccount.DoesNotExist:
-                    return Response({'message': 'User not found'}, status=404)
-            else:
-                return Response({'error': 'User not detected'}, status=400)
         else:
             return Response({'error': 'No photo found in the request'}, status=400)
+        
+def handle_attendance_record(user, image_path, check_type, check_time, location):
+    if check_type in ['checkin', 'checkout']:
+        event, created = CheckInAndOut.objects.update_or_create(
+            user=user,
+            image= image_path,
+            defaults={
+                'type': check_type,
+                'created_at': check_time,
+                'location': location
+            }
+        )
+    elif check_type in ['breakin', 'breakout']:
+        event, created = BreakInAndOut.objects.update_or_create(
+            user=user,
+            image= image_path,
+            defaults={
+                'type': check_type,
+                'created_at': check_time,
+                'location': location
+            }
+        )
+    else:
+        return None, False
 
+    return event, created
+
+@api_view(['GET'])
+def get_classify_face_task_result(request, task_id):
+    task_result = AsyncResult(task_id)
+
+    if task_result.ready():
+        detected_user_email, attendance_data = task_result.result
+        print(detected_user_email)
+        if detected_user_email == "Unknown" or detected_user_email is None:
+            print('not det image', detected_user_email)
+            return Response({'error': 'User not detected','status': 'FAILURE'})
+
+        try:
+            print('user found', detected_user_email)
+            detected_user = UserAccount.objects.get(email=detected_user_email)
+            location  = Location.objects.get(id=attendance_data['location_id']) if attendance_data['location_id'] else None
+            event, created = handle_attendance_record(
+                user=detected_user,
+                image_path=attendance_data['img_path'], 
+                check_type=attendance_data['type'],
+                check_time=timezone.now(),
+                location=location
+            )
+
+            if created:
+                return Response({'message': f"{attendance_data['type'].title()} successful for user: {detected_user.get_full_name()}","status": "SUCCESS"})
+            else:
+                return Response({'message': 'Failed to update attendance record','status': 'FAILURE'}, status=500)
+
+        except UserAccount.DoesNotExist:
+            return Response({'message': 'User not found','status': 'FAILURE'})
+    else:
+        return Response({'status': 'PROCESSING'})
 
 @api_view(['POST'])
 def get_contract_worker_attendance(request):
