@@ -627,7 +627,7 @@ def get_attendance_report(request):
             user_serializer = UserAccountSerializer(user)
 
             user_data = {
-                'user_info': user_serializer.data,
+                'user': user_serializer.data,
                 'work_time': None,
                 'break_time': None,
                 'entries': []

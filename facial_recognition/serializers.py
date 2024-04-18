@@ -6,13 +6,18 @@ from django.conf import settings
 
 
 class CustomUserAccountSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = UserAccount
-        fields = ['first_name', 'last_name', 'emp_id']
+        fields = ['full_name']
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
 
 
 class CheckInAndOutSerializer(serializers.ModelSerializer):
-    user = CustomUserAccountSerializer()
+    user = UserAccountSerializer()
     image = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(format='%d/%m/%Y %I:%M %p')
