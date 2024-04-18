@@ -16,6 +16,7 @@ from candidate_ranking.models import *
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 
+from facial_recognition.models import *
 
 
 @api_view(['POST'])
@@ -132,6 +133,7 @@ def create_or_get_location(request):
         serializer = LocationSerializer(locations, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @api_view(['DELETE'])
 @permission_classes([AllowAny])
 def delete_location(request, location_id):
@@ -179,8 +181,9 @@ def create_or_get_category(request):
         categories = Category.objects.all()
         serializer = CategorySerializer(categories, many=True)
 
-        print("categories" , categories)
+        print("categories", categories)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['DELETE'])
 @permission_classes([AllowAny])
@@ -289,13 +292,13 @@ def check_login(request):
 
 @api_view(['DELETE'])
 def delete_agency(request, agency_id):
-    
+
     agency = Agency.objects.get(id=agency_id)
     agency.delete()
     return Response({'message': 'Agency deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-    
 
-@api_view(['GET' ,'POST'])
+
+@api_view(['GET', 'POST'])
 def agency_list(request):
     if request.method == 'GET':
         agencies = Agency.objects.all()
@@ -309,26 +312,27 @@ def agency_list(request):
         labour_license = request.FILES.get('labourLicense')
         pan = request.FILES.get('pan')
         wcp = request.FILES.get('wcp')
-        
+
         agency = Agency.objects.create(
             name=name,
-            agency_owner = agency_owner,
-            gst = gst,
-            labour_license = labour_license,
-            pan = pan,
-            wcp = wcp
+            agency_owner=agency_owner,
+            gst=gst,
+            labour_license=labour_license,
+            pan=pan,
+            wcp=wcp
         )
         serializer = AgencySerializer(agency)
-        
+
         return Response({'message': 'Agency created successfully', 'data': serializer.data})
-    
+
+
 @api_view(['DELETE'])
 def delete_agency(request, agency_id):
-    
+
     agency = Agency.objects.get(id=agency_id)
     agency.delete()
     return Response({'message': 'Agency deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-    
+
 
 # @api_view(['GET'])
 # @permission_classes([AllowAny])
