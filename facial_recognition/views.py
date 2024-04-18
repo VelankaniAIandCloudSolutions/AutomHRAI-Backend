@@ -648,6 +648,7 @@ def get_attendance_report(request):
             ).order_by('created_at')
 
             if checkins.count() != checkouts.count():
+                print('not eqs')
                 user_data['work_time'] = 'Incomplete check-in/check-out data'
             else:
                 working_hours = sum(
@@ -682,13 +683,13 @@ def get_attendance_report(request):
                     user_data['break_time'] = break_hours
 
             # Get all entries
-            entries = list(checkins) + list(checkouts) + \
-                list(breakins) + list(breakouts)
-            sorted_entries = sorted(
-                entries, key=lambda entry: entry.created_at)
+                entries = list(checkins) + list(checkouts) + \
+                    list(breakins) + list(breakouts)
+                sorted_entries = sorted(
+                    entries, key=lambda entry: entry.created_at)
 
-            user_data['entries'] = CheckBreakSerializer(
-                sorted_entries, many=True).data
+                user_data['entries'] = CheckBreakSerializer(
+                    sorted_entries, many=True).data
 
             response_data.append(user_data)
 
