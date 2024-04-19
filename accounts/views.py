@@ -259,6 +259,16 @@ def update_user(request, user_id):
         else:
             is_superuser = False
 
+        if data.get('is_supervisor') == 'true':
+            is_supervisor = True
+        else:
+            is_supervisor = False
+
+        if data.get('is_supervisor_admin') == 'true':
+            is_supervisor_admin = True
+        else:
+            is_supervisor_admin = False
+
         user.email = data.get('email', user.email)
         user.password = data.get('password', user.password)
         user.first_name = data.get('first_name', user.first_name)
@@ -268,6 +278,8 @@ def update_user(request, user_id):
         user.is_active = is_active
         user.is_staff = is_staff
         user.is_superuser = is_superuser
+        user.is_supervisor = is_supervisor
+        user.is_supervisor_admin = is_supervisor_admin
 
         company_id = data.get('company_id')
         if company_id:
