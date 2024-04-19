@@ -12,7 +12,7 @@ chardet==3.0.4
 charset-normalizer==3.3.2
 click==8.1.7
 cloudpathlib==0.16.0
-cmake==3.28.3
+# cmake==3.28.3
 colorama==0.4.6
 compressed_rtf==1.0.6
 confection==0.1.4
@@ -25,7 +25,7 @@ django-templated-mail==1.1.1
 djangorestframework==3.14.0
 djangorestframework-simplejwt==5.3.1
 djoser==2.2.2
-dlib==19.24.2
+# dlib==19.24.2
 docx2txt==0.8
 ebcdic==1.1.1
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl#sha256=86cc141f63942d4b2c5fcee06630fd6f904788d2f0ab005cce45aadb8fb73889
