@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 from app_settings.models import *
+from django.db.models import Max
 
 
 class BaseModel(models.Model):
@@ -54,7 +55,7 @@ class UserAccountManager(BaseUserManager):
 class Agency(BaseModel):
 
     name = models.CharField(max_length=255)
-    agency_id = models.CharField(max_length=10,unique=True)
+    agency_id = models.CharField(max_length=10, unique=True)
     agency_owner = models.CharField(max_length=255, blank=True, null=True)
     gst = models.CharField(max_length=255, blank=True, null=True)
     labour_license = models.FileField(
@@ -67,16 +68,28 @@ class Agency(BaseModel):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            super().save(*args, **kwargs)  # Save the object to assign the primary key
+            # Assign agency_id based on the auto-generated primary key
+            self.agency_id = f"A-{self.pk:06}"
+            self.save()  # Save again to update agency_id
+        else:
+            super().save(*args, **kwargs)
+
 
 class Category(BaseModel):
     name = models.CharField(max_length=255)
 
     def __str__(self):
         return self.name
-    
+
+
 class SubCategory(BaseModel):
     name = models.CharField(max_length=255)
-    category = models.ForeignKey(Category, related_name='sub_categories', on_delete=models.CASCADE, null=True)
+    category = models.ForeignKey(
+        Category, related_name='sub_categories', on_delete=models.CASCADE, null=True)
+
     def __str__(self):
         return self.name
 
@@ -122,19 +135,25 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         blank=True,
         to_field='id'
     )
-    company = models.ForeignKey(Company,related_name='user_accounts',on_delete=models.CASCADE, null=True, blank=True)
-    user_image  = models.FileField(upload_to='user_images/', null=True, blank=True)
-    is_contract_worker = models.BooleanField(default = False )
-    is_supervisor = models.BooleanField(default = False)
-    is_supervisor_admin = models.BooleanField(default = False)
-    agency = models.ForeignKey(Agency , related_name = 'user_accounts' , on_delete=models.CASCADE , null = True , blank = True)
-    dob = models.DateField(blank = True , null = True)
-    age = models.IntegerField(null = True , blank = True)
-    aadhaar_card = models.FileField(upload_to='user_files/', null=True, blank=True)
+    company = models.ForeignKey(
+        Company, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
+    user_image = models.FileField(
+        upload_to='user_images/', null=True, blank=True)
+    is_contract_worker = models.BooleanField(default=False)
+    is_supervisor = models.BooleanField(default=False)
+    is_supervisor_admin = models.BooleanField(default=False)
+    agency = models.ForeignKey(
+        Agency, related_name='user_accounts', on_delete=models.CASCADE, null=True, blank=True)
+    dob = models.DateField(blank=True, null=True)
+    age = models.IntegerField(null=True, blank=True)
+    aadhaar_card = models.FileField(
+        upload_to='user_files/', null=True, blank=True)
     pan = models.FileField(upload_to='user_files/', null=True, blank=True)
-    mobile = models.CharField(max_length = 255 , blank = True , null = True)
-    location = models.ForeignKey(Location , related_name = 'user_accounts' , on_delete=models.SET_NULL , null = True, blank = True)
-    sub_category = models.ForeignKey(SubCategory, related_name = 'user_accounts', on_delete=models.SET_NULL, null = True, blank = True)
+    mobile = models.CharField(max_length=255, blank=True, null=True)
+    location = models.ForeignKey(
+        Location, related_name='user_accounts', on_delete=models.SET_NULL, null=True, blank=True)
+    sub_category = models.ForeignKey(
+        SubCategory, related_name='user_accounts', on_delete=models.SET_NULL, null=True, blank=True)
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'
