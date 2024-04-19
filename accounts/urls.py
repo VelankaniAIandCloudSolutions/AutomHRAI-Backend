@@ -39,6 +39,8 @@ urlpatterns = [
     path('sub-categories/', views.get_delete_and_create_subcategories),
     path('sub-categories/delete/<int:subcategory_id>/',
          views.get_delete_and_create_subcategories),
+    path('sub-categories/edit/<int:subcategory_id>/',
+         views.get_delete_and_create_subcategories),
 
     # path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'),
     # path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'),

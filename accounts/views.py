@@ -588,7 +588,7 @@ def get_delete_and_create_projects(request, project_id=None):
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
 @permission_classes([])
 def get_delete_and_create_subcategories(request, subcategory_id=None):
     if request.method == 'GET':
@@ -627,6 +627,30 @@ def get_delete_and_create_subcategories(request, subcategory_id=None):
         except Category.DoesNotExist:
             return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'PUT':
+        # Update an existing subcategory
+        try:
+            name = request.data.get('name')
+            category_id = request.data.get('categoryId')
+            category = Category.objects.get(id=category_id)
+            subcategory = SubCategory.objects.get(id=subcategory_id)
+            subcategory.name = name
+            subcategory.category = category
+            # Update additional fields as needed
+            subcategory.save()
+
+            all_subcategories = SubCategory.objects.all()
+            subcategory_serializer = SubCategorySerializer(
+                all_subcategories, many=True)
+
+            return Response(subcategory_serializer.data, status=status.HTTP_200_OK)
+        except SubCategory.DoesNotExist:
+            return Response({"error": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
