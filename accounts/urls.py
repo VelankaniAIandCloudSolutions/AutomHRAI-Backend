@@ -16,7 +16,7 @@ urlpatterns = [
     path('contract-workers/', views.get_and_delete_contract_workers),
     path('contract-workers/delete/<int:contract_worker_id>/',
          get_and_delete_contract_workers),
-    path('contract-workers/create/', views.create_contract_worker),
+    path('contract-workers/create/', views.get_and_create_contract_worker),
     path('projects/', views.get_delete_and_create_projects),
     path('projects/delete/<int:project_id>/',
          views.get_delete_and_create_projects),
