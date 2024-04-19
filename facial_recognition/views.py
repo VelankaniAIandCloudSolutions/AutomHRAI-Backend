@@ -416,7 +416,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
