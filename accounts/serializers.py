@@ -40,6 +40,8 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
+    aadhaar_card = serializers.SerializerMethodField()
+    pan  = serializers.SerializerMethodField()
     full_name  = serializers.SerializerMethodField()
     agency = AgencySerializer()
     company = CompanySerializer()
@@ -51,6 +53,29 @@ class UserAccountSerializer(serializers.ModelSerializer):
         if not obj.user_image:
             return None
         return settings.WEBSITE_URL + obj.user_image.url
+    
+    def get_aadhaar_card(self, obj):
+        if not obj.aadhaar_card:
+            return None
+        return settings.WEBSITE_URL + obj.aadhaar_card.url
+
+    def get_pan(self, obj):
+        if not obj.pan:
+            return None
+        return settings.WEBSITE_URL + obj.pan.url
 
     def get_full_name(self, obj):
         return obj.get_full_name()
+
+class UserDocumentSerializer(serializers.ModelSerializer):
+    user = UserAccountSerializer()  
+    document_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserDocument
+        fields = '__all__'
+
+    def get_document_url(self, obj):
+        if not obj.document:
+            return None
+        return settings.WEBSITE_URL + obj.document.url
