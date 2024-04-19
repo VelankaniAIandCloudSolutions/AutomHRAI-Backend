@@ -99,7 +99,7 @@ xlrd==1.2.0
 XlsxWriter==3.2.0
 zipp==3.17.0
 mysqlclient
-
+gunicorn
 #celery
 # redis
 # facenet_pytorch
