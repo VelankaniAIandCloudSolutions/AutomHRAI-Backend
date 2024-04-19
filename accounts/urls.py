@@ -42,6 +42,7 @@ urlpatterns = [
     path('sub-categories/edit/<int:subcategory_id>/',
          views.get_delete_and_create_subcategories),
 
+    path('edit_agency/<int:agency_id>/',edit_agency, name='edit_agency'),
     # path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'),
     # path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'),
     # path('import-jobs-from-automhr/', import_jobs_from_automhr,name='import_jobs_from_automhr'),

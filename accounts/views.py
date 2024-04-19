@@ -338,6 +338,29 @@ def delete_agency(request, agency_id):
     agency.delete()
     return Response({'message': 'Agency deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+@api_view(['PUT'])
+def edit_agency(request, agency_id):
+    try:
+        agency = Agency.objects.get(pk=agency_id)
+        
+        agency.name = request.data.get('name', agency.name)
+        agency.agency_owner = request.data.get('ownerName', agency.agency_owner)
+        agency.gst = request.data.get('gst', agency.gst)
+        
+        agency.labour_license = request.FILES.get('labourLicense', agency.labour_license)
+        agency.pan = request.FILES.get('pan', agency.pan)
+        agency.wcp = request.FILES.get('wcp', agency.wcp)
+        
+        agency.save()
+        
+        serializer = AgencySerializer(agency)
+        
+        return Response({'message': 'Agency updated successfully', 'data': serializer.data})
+    except Agency.DoesNotExist:
+        return Response({'message': 'Agency not found'}, status=404)
+    except Exception as e:
+        return Response({'message': str(e)}, status=400)
+    
 
 # @api_view(['GET'])
 # @permission_classes([AllowAny])
