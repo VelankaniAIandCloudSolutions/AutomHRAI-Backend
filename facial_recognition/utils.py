@@ -82,33 +82,45 @@
 import face_recognition
 from PIL import Image
 import numpy as np
+from django.conf import settings
 
 def get_encoded_faces():
-    """
-    This function loads all user account images and encodes their faces with optimizations for image size and detection parameters.
-    """
-    from .models import UserAccount
-    user_accounts = UserAccount.objects.all()
+    import requests
+    from accounts.models import UserAccount
+    from io import BytesIO
     encoded = {}
 
-    for user_account in user_accounts:
+    for user_account in UserAccount.objects.all():
         encoding = None
         if user_account.user_image:
-            # Load the image and resize it to reduce processing time
-            img = face_recognition.load_image_file(user_account.user_image.path)
-            # small_img = np.array(Image.fromarray(img).resize((0.5 * img.shape[1], 0.5 * img.shape[0])))
-            small_img = np.array(Image.fromarray(img).resize((int(0.5 * img.shape[1]), int(0.5 * img.shape[0]))))
-            # Optionally use CNN model for more accurate face detection (slower)
-            face_locations = face_recognition.face_locations(small_img, model='hog')  # Change to 'cnn' for more accuracy, hog for faster
-            face_encodings = face_recognition.face_encodings(small_img, face_locations, num_jitters=1)  # Reduced jitters
+            s3_url = user_account.user_image
+            s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/" # Replace this with your S3 bucket base URL
+            s3_url = s3_base_url + str(user_account.user_image)
+            print(s3_url)
+            response = requests.get(s3_url)
+            if response.status_code == 200:
+                # Read the image data from the response
+                image_data = BytesIO(response.content)
+                
+                # Load the image from the image data
+                img = face_recognition.load_image_file(image_data)
+                print(img)
+                # Resize the image to reduce processing time
+                small_img = np.array(Image.fromarray(img).resize((int(0.5 * img.shape[1]), int(0.5 * img.shape[0]))))
 
-            if face_encodings:
-                encoding = face_encodings[0]
+                # Optionally use CNN model for more accurate face detection (slower)
+                face_locations = face_recognition.face_locations(small_img, model='hog')  # Change to 'cnn' for more accuracy, hog for faster
+                face_encodings = face_recognition.face_encodings(small_img, face_locations, num_jitters=1)  # Reduced jitters
 
-            if encoding is not None:
-                encoded[user_account.email] = encoding
+                if face_encodings:
+                    encoding = face_encodings[0]
+
+                if encoding is not None:
+                    encoded[user_account.email] = encoding
+                else:
+                    print("No face found in the image")
             else:
-                print("No face found in the image")
+                print(f"Failed to download image from {s3_url}")
 
     return encoded
 

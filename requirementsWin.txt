@@ -107,3 +107,6 @@ zipp==3.17.0
 # django-celery-results
 #Django - 4.2.11
 #django-redis
+#boto3
+#django-storages
+#python-dotenv

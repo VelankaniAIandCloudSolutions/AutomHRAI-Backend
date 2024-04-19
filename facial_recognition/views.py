@@ -33,7 +33,6 @@ from rest_framework import status
 from django.contrib.auth.decorators import login_required
 import uuid
 import json
-from datetime import datetime
 import base64, os
 from .tasks import *
 from django.core.cache import cache
@@ -534,7 +533,6 @@ def get_timesheet_data(request, user_id):
 #             return Response({'error': 'No photo found in the request'}, status=400)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def mark_attendance_without_login(request):
     if request.method == 'POST':
         photo_data = request.POST.get('photo')
@@ -584,6 +582,10 @@ def handle_attendance_record(user, image_path, check_type, check_time, location)
 
     return event, created
 
+from automhrai.utils import upload_file_to_s3
+import boto3
+from django.conf import settings
+
 @api_view(['GET'])
 def get_classify_face_task_result(request, task_id):
     task_result = AsyncResult(task_id)
@@ -599,9 +601,15 @@ def get_classify_face_task_result(request, task_id):
             print('user found', detected_user_email)
             detected_user = UserAccount.objects.get(email=detected_user_email)
             location  = Location.objects.get(id=attendance_data['location_id']) if attendance_data['location_id'] else None
+
+            s3_object_key = f"attendance_images/{os.path.basename(attendance_data['img_path'])}"
+            s3_url = upload_file_to_s3(attendance_data['img_path'], settings.AWS_STORAGE_BUCKET_NAME, s3_object_key)
+            print(s3_url)
+            os.remove(attendance_data['img_path'])
+
             event, created = handle_attendance_record(
                 user=detected_user,
-                image_path=attendance_data['img_path'], 
+                image_path=s3_url, 
                 check_type=attendance_data['type'],
                 check_time=timezone.now(),
                 location=location
