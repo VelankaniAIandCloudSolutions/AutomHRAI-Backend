@@ -26,10 +26,12 @@ SECRET_KEY = 'django-insecure-*)al*&d#&ud0w%#!wet(k@syxqe-=r@e!yt7xdyzkzgt+k@&d2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", 
+    "http://ai.automhr.com"
+    "https://ai.automhr.com"
 ]
 
 # Application definition
