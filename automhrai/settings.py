@@ -33,7 +33,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://ai.automhr.com",
     "https://ai.automhr.com"
 ]
-
+CSRF_TRUSTED_ORIGINS = ['https://*.automhr.com','http://*.automhr.com','http://*.127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
