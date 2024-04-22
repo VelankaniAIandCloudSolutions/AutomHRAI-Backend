@@ -9,8 +9,9 @@ class ResumeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_resume_file_path(self,obj):
+        clean_url = lambda url: url.split('?')[0]
         if obj.resume_file_path:
-            return settings.WEBSITE_URL + str(obj.resume_file_path.url)
+            return clean_url(obj.resume_file_path.url)
         return None
 
 class CandidateSerializer(serializers.ModelSerializer):
