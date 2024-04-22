@@ -1,4 +1,6 @@
+from django.core.files.uploadedfile import InMemoryUploadedFile
 import datetime
+from django.http import JsonResponse
 from django.shortcuts import render
 # Create your views here.
 from datetime import date, datetime
@@ -161,23 +163,43 @@ def delete_location(request, location_id):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# @api_view(['PUT'])
+# @permission_classes([AllowAny])
+# def update_location(request, location_id):
+#     try:
+#         location = Location.objects.get(pk=location_id)
+#         request_data = request.data.copy()
+#         serializer = LocationSerializer(
+#             location, data=request_data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         else:
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     except Location.DoesNotExist:
+#         return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
+#     except Exception as e:
+#         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['PUT'])
 @permission_classes([AllowAny])
 def update_location(request, location_id):
     try:
-        location = Location.objects.get(pk=location_id)
-        request_data = request.data.copy()
-        serializer = LocationSerializer(
-            location, data=request_data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        location = get_object_or_404(Location, pk=location_id)
+        # Assuming request data contains only the 'name' field to update
+        # or request.data.get('name') if using DRF
+        name = request.data.get('name')
+        if name:
+            location.name = name
+            location.save()
+            return JsonResponse({'message': 'Location name updated successfully'}, status=200)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'error': 'Name field not provided'}, status=400)
     except Location.DoesNotExist:
-        return Response({'error': 'Location not found'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'error': 'Location not found'}, status=404)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @api_view(['POST', 'GET'])
@@ -361,29 +383,32 @@ def delete_agency(request, agency_id):
     agency.delete()
     return Response({'message': 'Agency deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+
 @api_view(['PUT'])
 def edit_agency(request, agency_id):
     try:
         agency = Agency.objects.get(pk=agency_id)
-        
+
         agency.name = request.data.get('name', agency.name)
-        agency.agency_owner = request.data.get('ownerName', agency.agency_owner)
+        agency.agency_owner = request.data.get(
+            'ownerName', agency.agency_owner)
         agency.gst = request.data.get('gst', agency.gst)
-        
-        agency.labour_license = request.FILES.get('labourLicense', agency.labour_license)
+
+        agency.labour_license = request.FILES.get(
+            'labourLicense', agency.labour_license)
         agency.pan = request.FILES.get('pan', agency.pan)
         agency.wcp = request.FILES.get('wcp', agency.wcp)
-        
+
         agency.save()
-        
+
         serializer = AgencySerializer(agency)
-        
+
         return Response({'message': 'Agency updated successfully', 'data': serializer.data})
     except Agency.DoesNotExist:
         return Response({'message': 'Agency not found'}, status=404)
     except Exception as e:
         return Response({'message': str(e)}, status=400)
-    
+
 
 # @api_view(['GET'])
 # @permission_classes([AllowAny])
@@ -581,7 +606,6 @@ def get_and_create_contract_worker(request):
             print("Error:", e)
             return Response({"message": "Error creating UserAccount"}, status=500)
 
-from django.core.files.uploadedfile import InMemoryUploadedFile
 
 @api_view(['GET', 'PUT'])
 @permission_classes([])
@@ -592,7 +616,8 @@ def update_contract_worker(request, worker_id):
         if request.method == 'GET':
             worker_serializer = UserAccountSerializer(worker)
             user_documents = UserDocument.objects.filter(user=worker)
-            user_documents_serializer = UserDocumentSerializer(user_documents, many=True)
+            user_documents_serializer = UserDocumentSerializer(
+                user_documents, many=True)
             return Response({
                 "worker": worker_serializer.data,
                 "user_documents": user_documents_serializer.data
@@ -635,10 +660,7 @@ def update_contract_worker(request, worker_id):
         return Response({"message": "Error updating contract worker"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-
-
-@api_view(['GET', 'POST', 'DELETE','PUT'])
+@api_view(['GET', 'POST', 'DELETE', 'PUT'])
 @permission_classes([])
 def get_delete_and_create_projects(request, project_id=None):
     if request.method == 'GET':
@@ -694,11 +716,11 @@ def get_delete_and_create_projects(request, project_id=None):
                 return Response({"error": "Project ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
-        
+
     elif request.method == 'PUT':
         if project_id:
             project = Project.objects.get(pk=project_id)
-           
+
         try:
 
             name = request.data.get('name')
@@ -712,7 +734,6 @@ def get_delete_and_create_projects(request, project_id=None):
             project.location = location
             project.category = category
             project.save()
-
 
             all_projects = Project.objects.all()
             project_serializer = ProjectSerializer(all_projects, many=True)
