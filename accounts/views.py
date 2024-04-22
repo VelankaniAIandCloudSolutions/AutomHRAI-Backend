@@ -639,7 +639,7 @@ def update_contract_worker(request, worker_id):
 
 
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET', 'POST', 'DELETE','PUT'])
 @permission_classes([])
 def get_delete_and_create_projects(request, project_id=None):
     if request.method == 'GET':
@@ -695,6 +695,36 @@ def get_delete_and_create_projects(request, project_id=None):
                 return Response({"error": "Project ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    elif request.method == 'PUT':
+        if project_id:
+            project = Project.objects.get(pk=project_id)
+           
+        try:
+
+            name = request.data.get('name')
+            location_id = request.data.get('location')
+            category_id = request.data.get('category')
+
+            location = Location.objects.get(id=location_id)
+            category = Category.objects.get(id=category_id)
+
+            project.name = name
+            project.location = location
+            project.category = category
+            project.save()
+
+
+            all_projects = Project.objects.all()
+            project_serializer = ProjectSerializer(all_projects, many=True)
+
+            return Response({"projects": project_serializer.data}, status=status.HTTP_200_OK)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Location.DoesNotExist:
+            return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
