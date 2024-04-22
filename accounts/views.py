@@ -605,6 +605,7 @@ def get_delete_and_create_projects(request, project_id=None):
             project.category = category
             project.save()
 
+
             all_projects = Project.objects.all()
             project_serializer = ProjectSerializer(all_projects, many=True)
 
