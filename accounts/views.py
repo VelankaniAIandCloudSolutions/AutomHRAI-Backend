@@ -87,6 +87,16 @@ def create_user(request):
         else:
             is_superuser = False
 
+        if data.get('is_supervisor') == 'true':
+            is_supervisor = True
+        else:
+            is_supervisor = False
+
+        if data.get('is_supervisor_admin') == 'true':
+            is_supervisor_admin = True
+        else:
+            is_supervisor_admin = False
+
         company_id = data.get('company_id')
         user_image = request.FILES.get('user_image')
         emp_id = data.get('emp_id')
@@ -107,6 +117,8 @@ def create_user(request):
             is_active=is_active,
             is_staff=is_staff,
             is_superuser=is_superuser,
+            is_supervisor=is_supervisor,
+            is_supervisor_admin=is_supervisor_admin,
             company=company,
             user_image=user_image,
         )
@@ -247,6 +259,16 @@ def update_user(request, user_id):
         else:
             is_superuser = False
 
+        if data.get('is_supervisor') == 'true':
+            is_supervisor = True
+        else:
+            is_supervisor = False
+
+        if data.get('is_supervisor_admin') == 'true':
+            is_supervisor_admin = True
+        else:
+            is_supervisor_admin = False
+
         user.email = data.get('email', user.email)
         user.password = data.get('password', user.password)
         user.first_name = data.get('first_name', user.first_name)
@@ -256,6 +278,8 @@ def update_user(request, user_id):
         user.is_active = is_active
         user.is_staff = is_staff
         user.is_superuser = is_superuser
+        user.is_supervisor = is_supervisor
+        user.is_supervisor_admin = is_supervisor_admin
 
         company_id = data.get('company_id')
         if company_id:
@@ -457,15 +481,17 @@ def get_and_delete_contract_workers(request, contract_worker_id=None):
 
 @api_view(['GET', 'POST'])
 @permission_classes([])
-def create_contract_worker(request):
+def get_and_create_contract_worker(request):
     if request.method == 'GET':
         agencies = Agency.objects.all()
+        sub_categories = SubCategory.objects.all()
 
         agency_serializer = AgencySerializer(agencies, many=True)
-
+        subcategory_serializer = SubCategorySerializer(
+            sub_categories, many=True)
         return Response({
             'agencies': agency_serializer.data,
-
+            'subCategories': subcategory_serializer.data
         })
 
     elif request.method == 'POST':
@@ -475,9 +501,12 @@ def create_contract_worker(request):
             # Extract agency and location IDs
             agency_id = data.get('agency')
             location_id = data.get('location')
+            subcategory_id = data.get('subcategory')
+            print(subcategory_id)
 
             # Retrieve agency and location objects
             agency = get_object_or_404(Agency, id=agency_id)
+            subcategory = get_object_or_404(SubCategory, id=subcategory_id)
             # location = get_object_or_404(Location, id=location_id)
 
             # Extract other fields
@@ -517,6 +546,7 @@ def create_contract_worker(request):
                 dob=dob,
                 age=age,
                 agency=agency,
+                sub_category=subcategory,
                 is_contract_worker=True
                 # Pass any additional fields
             )

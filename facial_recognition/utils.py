@@ -1,4 +1,4 @@
-#using deep learning and more accuracy but slower, works best with gpu
+# using deep learning and more accuracy but slower, works best with gpu
 ################################################
 # from facenet_pytorch import MTCNN, InceptionResnetV1
 # from PIL import Image
@@ -123,6 +123,7 @@ def get_encoded_faces():
                 print(f"Failed to download image from {s3_url}")
 
     return encoded
+
 
 def classify_face(img_path, threshold=0.4):
     img = face_recognition.load_image_file(img_path)
