@@ -20,6 +20,8 @@ urlpatterns = [
     path('projects/', views.get_delete_and_create_projects),
     path('projects/delete/<int:project_id>/',
          views.get_delete_and_create_projects),
+    path('projects/edit/<int:project_id>/',
+         views.get_delete_and_create_projects),
     path('projects/create/', views.get_delete_and_create_projects),
     path('agency_list/', agency_list, name='agency_list'),
     path('delete_agency/<int:agency_id>/', delete_agency, name='delete_agency'),
