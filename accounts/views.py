@@ -167,7 +167,6 @@ def update_location(request, location_id):
     try:
         location = Location.objects.get(pk=location_id)
         request_data = request.data.copy()
-        request_data.pop('company', None)
         serializer = LocationSerializer(
             location, data=request_data, partial=True)
         if serializer.is_valid():
