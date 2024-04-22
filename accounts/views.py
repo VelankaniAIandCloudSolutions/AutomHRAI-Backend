@@ -87,6 +87,16 @@ def create_user(request):
         else:
             is_superuser = False
 
+        if data.get('is_supervisor') == 'true':
+            is_supervisor = True
+        else:
+            is_supervisor = False
+
+        if data.get('is_supervisor_admin') == 'true':
+            is_supervisor_admin = True
+        else:
+            is_supervisor_admin = False
+
         company_id = data.get('company_id')
         user_image = request.FILES.get('user_image')
         emp_id = data.get('emp_id')
@@ -107,6 +117,8 @@ def create_user(request):
             is_active=is_active,
             is_staff=is_staff,
             is_superuser=is_superuser,
+            is_supervisor=is_supervisor,
+            is_supervisor_admin=is_supervisor_admin,
             company=company,
             user_image=user_image,
         )
@@ -155,7 +167,6 @@ def update_location(request, location_id):
     try:
         location = Location.objects.get(pk=location_id)
         request_data = request.data.copy()
-        request_data.pop('company', None)
         serializer = LocationSerializer(
             location, data=request_data, partial=True)
         if serializer.is_valid():
@@ -247,6 +258,16 @@ def update_user(request, user_id):
         else:
             is_superuser = False
 
+        if data.get('is_supervisor') == 'true':
+            is_supervisor = True
+        else:
+            is_supervisor = False
+
+        if data.get('is_supervisor_admin') == 'true':
+            is_supervisor_admin = True
+        else:
+            is_supervisor_admin = False
+
         user.email = data.get('email', user.email)
         user.password = data.get('password', user.password)
         user.first_name = data.get('first_name', user.first_name)
@@ -256,6 +277,8 @@ def update_user(request, user_id):
         user.is_active = is_active
         user.is_staff = is_staff
         user.is_superuser = is_superuser
+        user.is_supervisor = is_supervisor
+        user.is_supervisor_admin = is_supervisor_admin
 
         company_id = data.get('company_id')
         if company_id:
@@ -338,6 +361,29 @@ def delete_agency(request, agency_id):
     agency.delete()
     return Response({'message': 'Agency deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+@api_view(['PUT'])
+def edit_agency(request, agency_id):
+    try:
+        agency = Agency.objects.get(pk=agency_id)
+        
+        agency.name = request.data.get('name', agency.name)
+        agency.agency_owner = request.data.get('ownerName', agency.agency_owner)
+        agency.gst = request.data.get('gst', agency.gst)
+        
+        agency.labour_license = request.FILES.get('labourLicense', agency.labour_license)
+        agency.pan = request.FILES.get('pan', agency.pan)
+        agency.wcp = request.FILES.get('wcp', agency.wcp)
+        
+        agency.save()
+        
+        serializer = AgencySerializer(agency)
+        
+        return Response({'message': 'Agency updated successfully', 'data': serializer.data})
+    except Agency.DoesNotExist:
+        return Response({'message': 'Agency not found'}, status=404)
+    except Exception as e:
+        return Response({'message': str(e)}, status=400)
+    
 
 # @api_view(['GET'])
 # @permission_classes([AllowAny])
@@ -434,15 +480,17 @@ def get_and_delete_contract_workers(request, contract_worker_id=None):
 
 @api_view(['GET', 'POST'])
 @permission_classes([])
-def create_contract_worker(request):
+def get_and_create_contract_worker(request):
     if request.method == 'GET':
         agencies = Agency.objects.all()
+        sub_categories = SubCategory.objects.all()
 
         agency_serializer = AgencySerializer(agencies, many=True)
-
+        subcategory_serializer = SubCategorySerializer(
+            sub_categories, many=True)
         return Response({
             'agencies': agency_serializer.data,
-
+            'subCategories': subcategory_serializer.data
         })
 
     elif request.method == 'POST':
@@ -452,9 +500,12 @@ def create_contract_worker(request):
             # Extract agency and location IDs
             agency_id = data.get('agency')
             location_id = data.get('location')
+            subcategory_id = data.get('subcategory')
+            print(subcategory_id)
 
             # Retrieve agency and location objects
             agency = get_object_or_404(Agency, id=agency_id)
+            subcategory = get_object_or_404(SubCategory, id=subcategory_id)
             # location = get_object_or_404(Location, id=location_id)
 
             # Extract other fields
@@ -494,6 +545,7 @@ def create_contract_worker(request):
                 dob=dob,
                 age=age,
                 agency=agency,
+                sub_category=subcategory,
                 is_contract_worker=True
                 # Pass any additional fields
             )
@@ -529,8 +581,64 @@ def create_contract_worker(request):
             print("Error:", e)
             return Response({"message": "Error creating UserAccount"}, status=500)
 
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET', 'PUT'])
+@permission_classes([])
+def update_contract_worker(request, worker_id):
+    try:
+        worker = get_object_or_404(UserAccount, id=worker_id)
+
+        if request.method == 'GET':
+            worker_serializer = UserAccountSerializer(worker)
+            user_documents = UserDocument.objects.filter(user=worker)
+            user_documents_serializer = UserDocumentSerializer(user_documents, many=True)
+            return Response({
+                "worker": worker_serializer.data,
+                "user_documents": user_documents_serializer.data
+            })
+
+        elif request.method == 'PUT':
+            data = request.data
+
+            # Update the fields if provided in the request data
+            for field in ['first_name', 'last_name', 'email', 'password', 'emp_id',
+                          'phone_number', 'dob', 'agency', 'aadhaar_card', 'pan']:
+                if field in data:
+                    setattr(worker, field, data[field])
+
+            worker.save()
+
+            # Delete all existing user documents associated with the worker
+            user_documents = UserDocument.objects.filter(user=worker)
+            user_documents.delete()
+
+            # Handle user_images
+            user_images = request.FILES.getlist('user_images')
+            print('Number of user images received', len(user_images))
+
+            if user_images:
+                # Save the first image as user_image for the worker
+                worker.user_image = user_images[0]
+
+                # Save the rest of the images in UserDocument model
+                for image in user_images:
+                    UserDocument.objects.create(
+                        user=worker, document=image)
+
+                worker.save()
+
+            return Response({"message": "Contract worker updated successfully"}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print("Error:", e)
+        return Response({"message": "Error updating contract worker"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+
+@api_view(['GET', 'POST', 'DELETE','PUT'])
 @permission_classes([])
 def get_delete_and_create_projects(request, project_id=None):
     if request.method == 'GET':
@@ -586,6 +694,36 @@ def get_delete_and_create_projects(request, project_id=None):
                 return Response({"error": "Project ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
             return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    elif request.method == 'PUT':
+        if project_id:
+            project = Project.objects.get(pk=project_id)
+           
+        try:
+
+            name = request.data.get('name')
+            location_id = request.data.get('location')
+            category_id = request.data.get('category')
+
+            location = Location.objects.get(id=location_id)
+            category = Category.objects.get(id=category_id)
+
+            project.name = name
+            project.location = location
+            project.category = category
+            project.save()
+
+
+            all_projects = Project.objects.all()
+            project_serializer = ProjectSerializer(all_projects, many=True)
+
+            return Response({"projects": project_serializer.data}, status=status.HTTP_200_OK)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Location.DoesNotExist:
+            return Response({"error": "Location not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Category.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])

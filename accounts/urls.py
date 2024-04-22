@@ -16,10 +16,13 @@ urlpatterns = [
     path('contract-workers/', views.get_and_delete_contract_workers),
     path('contract-workers/delete/<int:contract_worker_id>/',
          get_and_delete_contract_workers),
-    path('contract-workers/create/', views.create_contract_worker),
+    path('contract-workers/create/', views.get_and_create_contract_worker),
     path('projects/', views.get_delete_and_create_projects),
     path('projects/delete/<int:project_id>/',
          views.get_delete_and_create_projects),
+    path('projects/edit/<int:project_id>/',
+         views.get_delete_and_create_projects),
+    
     path('projects/create/', views.get_delete_and_create_projects),
     path('agency_list/', agency_list, name='agency_list'),
     path('delete_agency/<int:agency_id>/', delete_agency, name='delete_agency'),
@@ -42,6 +45,8 @@ urlpatterns = [
     path('sub-categories/edit/<int:subcategory_id>/',
          views.get_delete_and_create_subcategories),
 
+    path('edit_agency/<int:agency_id>/',edit_agency, name='edit_agency'),
+    path('contract-workers/update/<int:worker_id>/' ,update_contract_worker , name = 'update_contract_worker' ),
     # path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'),
     # path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'),
     # path('import-jobs-from-automhr/', import_jobs_from_automhr,name='import_jobs_from_automhr'),

@@ -30,7 +30,7 @@ class CheckInAndOutSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         if (obj.image):
-            return settings.WEBSITE_URL + '/' + str(obj.image)
+            return str(obj.image)
         else:
             return ''
 
@@ -56,7 +56,7 @@ class BreakInAndOutSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         if (obj.image):
-            return settings.WEBSITE_URL + '/' + str(obj.image)
+            return str(obj.image)
         else:
             return ''
 

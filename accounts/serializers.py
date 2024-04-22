@@ -15,10 +15,29 @@ class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
 
 
 class AgencySerializer(serializers.ModelSerializer):
+    labour_license = serializers.SerializerMethodField()
+    pan = serializers.SerializerMethodField()
+    wcp = serializers.SerializerMethodField()
     class Meta:
         model = Agency
         fields = '__all__'
 
+    def get_labour_license(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.labour_license:
+            return None
+        return clean_url(obj.labour_license.url)
+    def get_pan(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.pan:
+            return None
+        return clean_url(obj.pan.url)
+    def get_wcp(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.wcp:
+            return None
+        return clean_url(obj.wcp.url)
+    
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
@@ -59,7 +78,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class UserAccountSerializer(serializers.ModelSerializer):
     user_image = serializers.SerializerMethodField()
-    full_name = serializers.SerializerMethodField()
+    aadhaar_card = serializers.SerializerMethodField()
+    pan  = serializers.SerializerMethodField()
+    full_name  = serializers.SerializerMethodField()
     agency = AgencySerializer()
     company = CompanySerializer()
 
@@ -68,9 +89,36 @@ class UserAccountSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_user_image(self, obj):
+        clean_url = lambda url: url.split('?')[0]
         if not obj.user_image:
             return None
-        return settings.WEBSITE_URL + obj.user_image.url
+        return clean_url(obj.user_image.url)
+    
+    def get_aadhaar_card(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.aadhaar_card:
+            return None
+        return clean_url(obj.aadhaar_card.url)
+
+    def get_pan(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.pan:
+            return None
+        return clean_url(obj.pan.url) 
 
     def get_full_name(self, obj):
         return obj.get_full_name()
+
+class UserDocumentSerializer(serializers.ModelSerializer):
+    user = UserAccountSerializer()  
+    document_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserDocument
+        fields = '__all__'
+
+    def get_document_url(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.document:
+            return None
+        return clean_url(obj.document.url)
