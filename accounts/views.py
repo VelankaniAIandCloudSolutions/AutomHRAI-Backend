@@ -497,18 +497,13 @@ def get_and_create_contract_worker(request):
         try:
             data = request.data
 
-            # Extract agency and location IDs
-            agency_id = data.get('agency')
-            location_id = data.get('location')
-            subcategory_id = data.get('subcategory')
-            print(subcategory_id)
-
-            # Retrieve agency and location objects
+            agency_id = data.get('agency', None)
+            subcategory_id = data.get('subcategory', None)
             agency = get_object_or_404(Agency, id=agency_id)
-            subcategory = get_object_or_404(SubCategory, id=subcategory_id)
-            # location = get_object_or_404(Location, id=location_id)
-
-            # Extract other fields
+            if subcategory_id:
+                subcategory = get_object_or_404(SubCategory, id=subcategory_id)
+            else:
+                subcategory = None
             first_name = data.get('first_name')
             last_name = data.get('last_name')
             email = data.get('email')
@@ -520,7 +515,7 @@ def get_and_create_contract_worker(request):
             pan = data.get('pan')
             dob = data.get('dob')
             # company = data.get('company')
-
+            company  = request.user.company 
             # Calculate age from date of birth
             if dob:
                 dob_date = datetime.strptime(dob, '%Y-%m-%d').date()
@@ -546,7 +541,8 @@ def get_and_create_contract_worker(request):
                 age=age,
                 agency=agency,
                 sub_category=subcategory,
-                is_contract_worker=True
+                is_contract_worker=True,
+                company = company
                 # Pass any additional fields
             )
 
