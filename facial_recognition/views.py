@@ -36,6 +36,9 @@ import json
 import base64, os
 from .tasks import *
 from django.core.cache import cache
+from automhrai.utils import upload_file_to_s3
+from django.conf import settings
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def upload_photo(request):
@@ -556,11 +559,44 @@ def mark_attendance_without_login(request):
         else:
             return Response({'error': 'No photo found in the request'}, status=400)
         
+from django.db.models import Q
+
 def handle_attendance_record(user, image_path, check_type, check_time, location):
+    current_date = timezone.now().date()
+
+    has_checkin_today = CheckInAndOut.objects.filter(
+        Q(user=user, type='checkin', created_at__date=current_date)
+    ).exists()
+    has_checkout_today = CheckInAndOut.objects.filter(
+        Q(user=user, type='checkout', created_at__date=current_date)
+    ).exists()
+
+    has_breakin_today = BreakInAndOut.objects.filter(
+        Q(user=user, type='breakin', created_at__date=current_date)
+    ).exists()
+    has_breakout_today = BreakInAndOut.objects.filter(
+        Q(user=user, type='breakout', created_at__date=current_date)
+    ).exists()
+
+    if check_type == 'checkin':
+        if has_checkin_today and not has_checkout_today:
+            return None, False, 'User already checked in on the current day'
+    elif check_type == 'checkout':
+        if not has_checkin_today:
+            return None, False, 'User cannot check out without checking in today'
+    elif check_type == 'breakin':
+        if not has_checkin_today or (has_breakin_today and not has_breakout_today):
+            return None, False, 'User cannot break in without checking in or breaking out'
+    elif check_type == 'breakout':
+        if not has_checkin_today or not has_breakin_today:
+            return None, False, 'User cannot break out without checking in or breaking in'
+    else:
+        return None, False, ''
+
     if check_type in ['checkin', 'checkout']:
         event, created = CheckInAndOut.objects.update_or_create(
             user=user,
-            image= image_path,
+            image=image_path,
             defaults={
                 'type': check_type,
                 'created_at': check_time,
@@ -570,7 +606,7 @@ def handle_attendance_record(user, image_path, check_type, check_time, location)
     elif check_type in ['breakin', 'breakout']:
         event, created = BreakInAndOut.objects.update_or_create(
             user=user,
-            image= image_path,
+            image=image_path,
             defaults={
                 'type': check_type,
                 'created_at': check_time,
@@ -578,13 +614,10 @@ def handle_attendance_record(user, image_path, check_type, check_time, location)
             }
         )
     else:
-        return None, False
+        return None, False, ''
 
-    return event, created
+    return event, created, ''
 
-from automhrai.utils import upload_file_to_s3
-import boto3
-from django.conf import settings
 
 @api_view(['GET'])
 def get_classify_face_task_result(request, task_id):
@@ -606,18 +639,18 @@ def get_classify_face_task_result(request, task_id):
             if s3_url:
                 os.remove(attendance_data['img_path'])
 
-                event, created = handle_attendance_record(
+                event, created, message = handle_attendance_record(
                     user=detected_user,
                     image_path=s3_url, 
                     check_type=attendance_data['type'],
                     check_time=timezone.now(),
                     location=location
                 )
-
+                print('message', message)
                 if created:
                     return Response({'message': f"{attendance_data['type'].title()} successful for user: {detected_user.get_full_name()}","status": "SUCCESS"})
                 else:
-                    return Response({'message': 'Failed to update attendance record','status': 'FAILURE'}, status=500)
+                    return Response({'message': 'Failed to update attendance record, '+ message,'status': 'FAILURE'})
             else:
                 return Response({'message': 'Failed to upload image to S3', 'status': 'FAILURE'}, status=500)
         except UserAccount.DoesNotExist:
