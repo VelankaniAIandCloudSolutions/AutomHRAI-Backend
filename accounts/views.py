@@ -552,6 +552,62 @@ def create_contract_worker(request):
             print("Error:", e)
             return Response({"message": "Error creating UserAccount"}, status=500)
 
+from django.core.files.uploadedfile import InMemoryUploadedFile
+
+@api_view(['GET', 'PUT'])
+@permission_classes([])
+def update_contract_worker(request, worker_id):
+    try:
+        worker = get_object_or_404(UserAccount, id=worker_id)
+
+        if request.method == 'GET':
+            worker_serializer = UserAccountSerializer(worker)
+            user_documents = UserDocument.objects.filter(user=worker)
+            user_documents_serializer = UserDocumentSerializer(user_documents, many=True)
+            return Response({
+                "worker": worker_serializer.data,
+                "user_documents": user_documents_serializer.data
+            })
+
+        elif request.method == 'PUT':
+            data = request.data
+
+            # Update the fields if provided in the request data
+            for field in ['first_name', 'last_name', 'email', 'password', 'emp_id',
+                          'phone_number', 'dob', 'agency', 'aadhaar_card', 'pan']:
+                if field in data:
+                    setattr(worker, field, data[field])
+
+            worker.save()
+
+            # Delete all existing user documents associated with the worker
+            user_documents = UserDocument.objects.filter(user=worker)
+            user_documents.delete()
+
+            # Handle user_images
+            user_images = request.FILES.getlist('user_images')
+            print('Number of user images received', len(user_images))
+
+            if user_images:
+                # Save the first image as user_image for the worker
+                worker.user_image = user_images[0]
+
+                # Save the rest of the images in UserDocument model
+                for image in user_images:
+                    UserDocument.objects.create(
+                        user=worker, document=image)
+
+                worker.save()
+
+            return Response({"message": "Contract worker updated successfully"}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print("Error:", e)
+        return Response({"message": "Error updating contract worker"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
 
 @api_view(['GET', 'POST', 'DELETE'])
 @permission_classes([])
