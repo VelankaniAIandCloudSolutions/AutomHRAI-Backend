@@ -707,7 +707,7 @@ def get_attendance_report(request):
             return Response({'error': 'Date is not provided but is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
 
