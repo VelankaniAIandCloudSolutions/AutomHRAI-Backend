@@ -15,10 +15,29 @@ class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
 
 
 class AgencySerializer(serializers.ModelSerializer):
+    labour_license = serializers.SerializerMethodField()
+    pan = serializers.SerializerMethodField()
+    wcp = serializers.SerializerMethodField()
     class Meta:
         model = Agency
         fields = '__all__'
 
+    def get_labour_license(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.labour_license:
+            return None
+        return clean_url(obj.labour_license.url)
+    def get_pan(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.pan:
+            return None
+        return clean_url(obj.pan.url)
+    def get_wcp(self, obj):
+        clean_url = lambda url: url.split('?')[0]
+        if not obj.wcp:
+            return None
+        return clean_url(obj.wcp.url)
+    
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
