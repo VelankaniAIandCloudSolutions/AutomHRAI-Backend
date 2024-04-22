@@ -68,9 +68,10 @@ class UserAccountSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_user_image(self, obj):
+        clean_url = lambda url: url.split('?')[0]
         if not obj.user_image:
             return None
-        return settings.WEBSITE_URL + obj.user_image.url
+        return clean_url(obj.user_image.url)
 
     def get_full_name(self, obj):
         return obj.get_full_name()

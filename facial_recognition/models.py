@@ -10,7 +10,7 @@ class CheckInAndOut(BaseModel):
 
     type = models.CharField(max_length=100, choices=CHECK_CHOICES , blank = True , null = True)
     user = models.ForeignKey(UserAccount , related_name='checks' , on_delete=models.CASCADE)
-    image = models.FileField(upload_to='attendance_images/', null=True, blank=True)
+    image = models.URLField(null=True, blank=True)
     project = models.ForeignKey(Project , related_name = 'check_ins_and_check_outs' , on_delete = models.SET_NULL , blank = True , null = True)
     location =models.ForeignKey(Location, related_name = 'check_ins_and_check_outs', on_delete = models.SET_NULL, blank = True, null = True)
 
@@ -24,7 +24,7 @@ class BreakInAndOut(BaseModel):
 
     type = models.CharField(max_length=100, choices=BREAK_CHOICES , blank = True , null = True)
     user = models.ForeignKey(UserAccount , related_name='breaks' , on_delete=models.CASCADE)
-    image = models.FileField(upload_to='attendance_images/', null=True, blank=True)
+    image = models.URLField(null=True, blank=True)
     project = models.ForeignKey(Project , related_name = 'break_ins_and_break_outs' , on_delete = models.SET_NULL , blank = True , null = True)
     location =models.ForeignKey(Location, related_name = 'break_ins_and_break_outs', on_delete = models.SET_NULL, blank = True, null = True)
 

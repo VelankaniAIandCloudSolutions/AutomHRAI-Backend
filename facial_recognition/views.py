@@ -324,7 +324,7 @@ def get_attendance_list(request, user_id):
                 'name': attendance.user.get_full_name(),
                 'email': attendance.user.email
             },
-            'image': attendance.image.url if attendance.image else None,
+            'image': attendance.image if attendance.image else None,
             'created_at': created_at_local.strftime("%Y-%m-%d %I:%M:%S %p"),
             'updated_at': attendance.updated_at.strftime("%Y-%m-%d %I:%M:%S %p") if attendance.updated_at else None,
             'checkin_time': created_at_local.strftime("%I:%M:%S %p") if attendance.type == 'checkin' else None,
@@ -594,7 +594,6 @@ def get_classify_face_task_result(request, task_id):
         detected_user_email, attendance_data = task_result.result
         print(detected_user_email)
         if detected_user_email == "Unknown" or detected_user_email is None:
-            print('not det image', detected_user_email)
             return Response({'error': 'User not detected','status': 'FAILURE'})
 
         try:
@@ -604,22 +603,23 @@ def get_classify_face_task_result(request, task_id):
 
             s3_object_key = f"attendance_images/{os.path.basename(attendance_data['img_path'])}"
             s3_url = upload_file_to_s3(attendance_data['img_path'], settings.AWS_STORAGE_BUCKET_NAME, s3_object_key)
-            print(s3_url)
-            os.remove(attendance_data['img_path'])
+            if s3_url:
+                os.remove(attendance_data['img_path'])
 
-            event, created = handle_attendance_record(
-                user=detected_user,
-                image_path=s3_url, 
-                check_type=attendance_data['type'],
-                check_time=timezone.now(),
-                location=location
-            )
+                event, created = handle_attendance_record(
+                    user=detected_user,
+                    image_path=s3_url, 
+                    check_type=attendance_data['type'],
+                    check_time=timezone.now(),
+                    location=location
+                )
 
-            if created:
-                return Response({'message': f"{attendance_data['type'].title()} successful for user: {detected_user.get_full_name()}","status": "SUCCESS"})
+                if created:
+                    return Response({'message': f"{attendance_data['type'].title()} successful for user: {detected_user.get_full_name()}","status": "SUCCESS"})
+                else:
+                    return Response({'message': 'Failed to update attendance record','status': 'FAILURE'}, status=500)
             else:
-                return Response({'message': 'Failed to update attendance record','status': 'FAILURE'}, status=500)
-
+                return Response({'message': 'Failed to upload image to S3', 'status': 'FAILURE'}, status=500)
         except UserAccount.DoesNotExist:
             return Response({'message': 'User not found','status': 'FAILURE'})
     else:
