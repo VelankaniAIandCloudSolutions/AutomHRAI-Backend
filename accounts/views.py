@@ -583,12 +583,14 @@ def get_and_create_contract_worker(request):
             return Response({"message": "Error creating UserAccount"}, status=500)
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
+import json
+from django.http import JsonResponse
 @api_view(['GET', 'PUT'])
 @permission_classes([])
 def update_contract_worker(request, worker_id):
     try:
         worker = get_object_or_404(UserAccount, id=worker_id)
+        print(worker)
 
         if request.method == 'GET':
             worker_serializer = UserAccountSerializer(worker)
@@ -610,30 +612,38 @@ def update_contract_worker(request, worker_id):
 
             worker.save()
 
-            # Delete all existing user documents associated with the worker
-            user_documents = UserDocument.objects.filter(user=worker)
-            user_documents.delete()
-
-            # Handle user_images
+            # Handle user images
             user_images = request.FILES.getlist('user_images')
-            print('Number of user images received', len(user_images))
 
-            if user_images:
-                # Save the first image as user_image for the worker
-                worker.user_image = user_images[0]
+            # Get deleted images IDs from the frontend
+            deleted_image_ids = json.loads(data.get('deleted_images', '[]'))
 
-                # Save the rest of the images in UserDocument model
-                for image in user_images:
-                    UserDocument.objects.create(
-                        user=worker, document=image)
+            # Iterate over each deleted image ID
+            for image_id in deleted_image_ids:
+                try:
+                    # Try to retrieve the UserDocument object with the given ID
+                    image_to_delete = UserDocument.objects.get(pk=image_id)
+                    # Delete the image if it exists
+                    image_to_delete.delete()
+                    print(f"Deleted image with ID {image_id}")
+                except UserDocument.DoesNotExist:
+                    # Handle the case where the image with the given ID doesn't exist
+                    print(f"Image with ID {image_id} does not exist")
 
-                worker.save()
+            # Update existing user documents and create new ones if needed
+            for image_id in user_images:
+                # Check if the image already exists in UserDocument model
+                existing_document = UserDocument.objects.filter(user=worker, document=image_id).first()
+                if not existing_document:
+                    # If the image doesn't exist, create a new user document
+                    UserDocument.objects.create(user=worker, document=image_id)
 
-            return Response({"message": "Contract worker updated successfully"}, status=status.HTTP_200_OK)
+            return JsonResponse({"message": "Contract worker updated successfully"})
 
     except Exception as e:
         print("Error:", e)
         return Response({"message": "Error updating contract worker"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

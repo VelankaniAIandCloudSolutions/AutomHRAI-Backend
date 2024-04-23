@@ -111,13 +111,13 @@ class UserAccountSerializer(serializers.ModelSerializer):
 
 class UserDocumentSerializer(serializers.ModelSerializer):
     user = UserAccountSerializer()  
-    document_url = serializers.SerializerMethodField()
+    document = serializers.SerializerMethodField()
 
     class Meta:
         model = UserDocument
         fields = '__all__'
 
-    def get_document_url(self, obj):
+    def get_document(self, obj):
         clean_url = lambda url: url.split('?')[0]
         if not obj.document:
             return None
