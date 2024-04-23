@@ -55,7 +55,7 @@ class UserAccountManager(BaseUserManager):
 class Agency(BaseModel):
 
     name = models.CharField(max_length=255)
-    agency_id = models.CharField(max_length=10, unique=True)
+    agency_id = models.CharField(max_length=10)
     agency_owner = models.CharField(max_length=255, blank=True, null=True)
     gst = models.CharField(max_length=255, blank=True, null=True)
     labour_license = models.FileField(
