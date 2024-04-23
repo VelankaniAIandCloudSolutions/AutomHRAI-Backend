@@ -96,7 +96,6 @@ def get_encoded_faces():
             s3_url = user_account.user_image
             s3_base_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com/" # Replace this with your S3 bucket base URL
             s3_url = s3_base_url + str(user_account.user_image)
-            print(s3_url)
             response = requests.get(s3_url)
             if response.status_code == 200:
                 # Read the image data from the response
@@ -104,7 +103,6 @@ def get_encoded_faces():
                 
                 # Load the image from the image data
                 img = face_recognition.load_image_file(image_data)
-                print(img)
                 # Resize the image to reduce processing time
                 small_img = np.array(Image.fromarray(img).resize((int(0.5 * img.shape[1]), int(0.5 * img.shape[0]))))
 

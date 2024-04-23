@@ -627,7 +627,7 @@ def get_classify_face_task_result(request, task_id):
         detected_user_email, attendance_data = task_result.result
         print(detected_user_email)
         if detected_user_email == "Unknown" or detected_user_email is None:
-            return Response({'error': 'User not detected','status': 'FAILURE'})
+            return Response({'message': 'User not detected','status': 'FAILURE'})
 
         try:
             print('user found', detected_user_email)
