@@ -1,3 +1,4 @@
+from django.db.models import Q
 from collections import defaultdict
 import pytz
 from django.shortcuts import render
@@ -33,11 +34,13 @@ from rest_framework import status
 from django.contrib.auth.decorators import login_required
 import uuid
 import json
-import base64, os
+import base64
+import os
 from .tasks import *
 from django.core.cache import cache
 from automhrai.utils import upload_file_to_s3
 from django.conf import settings
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -418,7 +421,8 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']
+        : entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -477,7 +481,7 @@ def get_timesheet_data(request, user_id):
 #                 f.write(decoded_contentfile)
 #             detected_user_email = classify_face(path, 0.4)
 
-#             if detected_user_email: 
+#             if detected_user_email:
 #                 print(detected_user_email)
 #                 try:
 #                     detected_user = UserAccount.objects.get(
@@ -546,20 +550,21 @@ def mark_attendance_without_login(request):
             _, str_img = photo_data.split(';base64,')
             decoded_contentfile = base64.b64decode(str_img)
 
-            unique_filename = timezone.now().strftime("%Y%m%d%H%M%S") + '_' + 'attendance.jpg'
+            unique_filename = timezone.now().strftime(
+                "%Y%m%d%H%M%S") + '_' + 'attendance.jpg'
             img_path = os.path.join('media', unique_filename)
             with open(img_path, 'wb') as f:
                 f.write(decoded_contentfile)
 
             cache_key = f"attendance_data_{unique_filename}"
-            cache.set(cache_key, {'type': check_type, 'location_id': location_id, 'img_path': img_path}, timeout=600) 
+            cache.set(cache_key, {
+                      'type': check_type, 'location_id': location_id, 'img_path': img_path}, timeout=600)
             task = async_classify_face.delay(img_path, 0.4)
             return Response({'task_id': task.id, 'status': 'Processing', 'cache_key': cache_key})
 
         else:
             return Response({'error': 'No photo found in the request'}, status=400)
-        
-from django.db.models import Q
+
 
 def handle_attendance_record(user, image_path, check_type, check_time, location):
     current_date = timezone.now().date()
@@ -627,36 +632,39 @@ def get_classify_face_task_result(request, task_id):
         detected_user_email, attendance_data = task_result.result
         print(detected_user_email)
         if detected_user_email == "Unknown" or detected_user_email is None:
-            return Response({'message': 'User not detected','status': 'FAILURE'})
+            return Response({'message': 'User not detected', 'status': 'FAILURE'})
 
         try:
             print('user found', detected_user_email)
             detected_user = UserAccount.objects.get(email=detected_user_email)
-            location  = Location.objects.get(id=attendance_data['location_id']) if attendance_data['location_id'] else None
+            location = Location.objects.get(
+                id=attendance_data['location_id']) if attendance_data['location_id'] else None
 
             s3_object_key = f"attendance_images/{os.path.basename(attendance_data['img_path'])}"
-            s3_url = upload_file_to_s3(attendance_data['img_path'], settings.AWS_STORAGE_BUCKET_NAME, s3_object_key)
+            s3_url = upload_file_to_s3(
+                attendance_data['img_path'], settings.AWS_STORAGE_BUCKET_NAME, s3_object_key)
             if s3_url:
                 os.remove(attendance_data['img_path'])
 
                 event, created, message = handle_attendance_record(
                     user=detected_user,
-                    image_path=s3_url, 
+                    image_path=s3_url,
                     check_type=attendance_data['type'],
                     check_time=timezone.now(),
                     location=location
                 )
                 print('message', message)
                 if created:
-                    return Response({'message': f"{attendance_data['type'].title()} successful for user: {detected_user.get_full_name()}","status": "SUCCESS"})
+                    return Response({'message': f"{attendance_data['type'].title()} successful for user: {detected_user.get_full_name()}", "status": "SUCCESS"})
                 else:
-                    return Response({'message': 'Failed to update attendance record, '+ message,'status': 'FAILURE'})
+                    return Response({'message': 'Failed to update attendance record, ' + message, 'status': 'FAILURE'})
             else:
                 return Response({'message': 'Failed to upload image to S3', 'status': 'FAILURE'}, status=500)
         except UserAccount.DoesNotExist:
-            return Response({'message': 'User not found','status': 'FAILURE'})
+            return Response({'message': 'User not found', 'status': 'FAILURE'})
     else:
         return Response({'status': 'PROCESSING'})
+
 
 @api_view(['POST'])
 def get_contract_worker_attendance(request):
@@ -741,6 +749,7 @@ def get_attendance_report(request):
 
         try:
             date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            print(date)
         except ValueError:
             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -766,36 +775,50 @@ def get_attendance_report(request):
                 created_at__date=date
             ).order_by('created_at')
 
+            print(checkins)
+
             checkouts = CheckInAndOut.objects.filter(
                 user=user,
                 type='checkout',
                 created_at__date=date
             ).order_by('created_at')
 
+            breakins = BreakInAndOut.objects.filter(
+                user=user,
+                type='breakin',
+                created_at__date=date
+            ).order_by('created_at')
+
+            breakouts = BreakInAndOut.objects.filter(
+                user=user,
+                type='breakout',
+                created_at__date=date
+            ).order_by('created_at')
+
             if checkins.count() != checkouts.count():
                 print('not eqs')
                 user_data['work_time'] = 'Incomplete check-in/check-out data'
+                entries = list(checkins) + list(checkouts) + \
+                    list(breakins) + list(breakouts)
+                sorted_entries = sorted(
+                    entries, key=lambda entry: entry.created_at)
+                user_data['entries'] = CheckBreakSerializer(
+                    sorted_entries, many=True).data
+
             else:
                 working_hours = sum(
                     (checkout.created_at - checkin.created_at).total_seconds()
                     for checkin, checkout in zip(checkins, checkouts)
                 )
 
-                # Calculate total break hours
-                breakins = BreakInAndOut.objects.filter(
-                    user=user,
-                    type='breakin',
-                    created_at__date=date
-                ).order_by('created_at')
-
-                breakouts = BreakInAndOut.objects.filter(
-                    user=user,
-                    type='breakout',
-                    created_at__date=date
-                ).order_by('created_at')
-
                 if breakins.count() != breakouts.count():
                     user_data['break_time'] = 'Incomplete break-in/break-out data'
+                    entries = list(checkins) + list(checkouts) + \
+                        list(breakins) + list(breakouts)
+                    sorted_entries = sorted(
+                        entries, key=lambda entry: entry.created_at)
+                    user_data['entries'] = CheckBreakSerializer(
+                        sorted_entries, many=True).data
                 else:
                     break_hours = sum(
                         (breakout.created_at - breakin.created_at).total_seconds()
@@ -810,8 +833,13 @@ def get_attendance_report(request):
             # Get all entries
                 entries = list(checkins) + list(checkouts) + \
                     list(breakins) + list(breakouts)
+
+                print('entries queryset', entries)
+
                 sorted_entries = sorted(
                     entries, key=lambda entry: entry.created_at)
+
+                print('this is sorted-entries query set', sorted_entries)
 
                 user_data['entries'] = CheckBreakSerializer(
                     sorted_entries, many=True).data
