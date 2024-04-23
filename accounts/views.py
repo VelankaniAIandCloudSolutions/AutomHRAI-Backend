@@ -365,6 +365,7 @@ def delete_agency(request, agency_id):
 @api_view(['PUT'])
 def edit_agency(request, agency_id):
     try:
+        print(request.data)
         agency = Agency.objects.get(pk=agency_id)
         
         agency.name = request.data.get('name', agency.name)
