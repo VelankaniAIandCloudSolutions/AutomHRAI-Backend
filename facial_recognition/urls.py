@@ -18,4 +18,5 @@ urlpatterns = [
     path('get_contract_worker_attendance',  get_contract_worker_attendance,
          name='get_contract_worker_attendance'),
     path('contract-workers/attendance-report/', views.get_attendance_report),
+    path('get_contract_worker_timesheet/',get_contract_worker_timesheet , name='get_contract_worker_timesheet')
 ]

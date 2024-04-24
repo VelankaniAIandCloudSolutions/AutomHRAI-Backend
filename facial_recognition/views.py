@@ -29,7 +29,9 @@ from .models import CheckInAndOut
 
 from django.db.models import F, ExpressionWrapper, fields
 from django.db.models import Sum
-import datetime
+from datetime import datetime, timedelta
+from django.utils import timezone
+
 from rest_framework import status
 from django.contrib.auth.decorators import login_required
 import uuid
@@ -736,6 +738,14 @@ def assign_project(request):
             return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+@api_view(['GET'])
+def get_contract_worker(request):
+    contract_workers = UserAccount.objects.filter(is_contract_worker=True)
+    serializer = UserAccountSerializer(contract_workers, many=True)
+    
+    return Response({'user_data': serializer.data}, status=status.HTTP_200_OK)
+    
 
 
 @api_view(['GET'])
@@ -743,7 +753,6 @@ def get_attendance_report(request):
     if request.method == 'GET':
         date_str = request.query_params.get('date')
 
-        # Validate date
         if not date_str:
             return Response({'error': 'Date is not provided but is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -753,7 +762,6 @@ def get_attendance_report(request):
         except ValueError:
             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get all contract worker users
         contract_workers = UserAccount.objects.filter(is_contract_worker=True)
 
         response_data = []
@@ -768,7 +776,6 @@ def get_attendance_report(request):
                 'entries': []
             }
 
-            # Calculate total working hours
             checkins = CheckInAndOut.objects.filter(
                 user=user,
                 type='checkin',
@@ -847,3 +854,101 @@ def get_attendance_report(request):
             response_data.append(user_data)
 
         return Response({'user_data': response_data}, status=status.HTTP_200_OK)
+
+@api_view(['GET', 'POST'])
+def get_contract_worker_timesheet(request):
+    if request.method == 'GET':
+        contract_workers = UserAccount.objects.filter(is_contract_worker=True)
+        serializer = UserAccountSerializer(contract_workers, many=True)
+    
+        return Response({'user_data': serializer.data}, status=status.HTTP_200_OK)
+    
+    if request.method == 'POST':
+        user_id = request.data.get('user_id')
+
+        if not user_id:
+            return Response({'error': 'No user ID provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = UserAccount.objects.get(id=user_id)
+        except UserAccount.DoesNotExist:
+            return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        start_date_str = request.data.get('start_date')
+        end_date_str = request.data.get('end_date')
+
+        start_date = None
+        end_date = None
+
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+        if not start_date:
+            checkins = CheckInAndOut.objects.filter(user=user_id, type='checkin')
+            if checkins.exists():
+                earliest_checkin = checkins.order_by('created_at').first().created_at
+                start_date = earliest_checkin.date()  # Extract the date part
+            else:
+                return Response({'error': 'No checkin entries found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not end_date:
+            end_date = datetime.now().date()
+
+        date_array = generate_date_array(start_date, end_date)
+
+        time_sheets = []
+        for date in date_array:
+            work_time, break_time, entries = calculate_timesheet_for_date(user, date)
+            user_data = {
+                'user_info': user.id,
+                'date': date,
+                'work_time': work_time,
+                'break_time': break_time,
+                'entries': entries
+            }
+            time_sheets.append(user_data)
+
+        return Response({'user_data': time_sheets}, status=status.HTTP_200_OK)
+
+def generate_date_array(start_date, end_date):
+    date_array = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_array.append(current_date.strftime('%Y-%m-%d'))
+        current_date += timedelta(days=1)
+    return date_array
+
+def calculate_timesheet_for_date(user, date):
+    checkins = CheckInAndOut.objects.filter(user=user, type='checkin', created_at__date=date).order_by('created_at')
+    checkouts = CheckInAndOut.objects.filter(user=user, type='checkout', created_at__date=date).order_by('created_at')
+    breakins = BreakInAndOut.objects.filter(user=user, type='breakin', created_at__date=date).order_by('created_at')
+    breakouts = BreakInAndOut.objects.filter(user=user, type='breakout', created_at__date=date).order_by('created_at')
+    work_time = calculate_work_time(checkins, checkouts, breakins, breakouts)
+    break_time = calculate_break_time(breakins, breakouts, checkins, checkouts)
+    entries = serialize_entries(checkins, checkouts, breakins, breakouts)
+
+    return work_time, break_time, entries
+
+def calculate_work_time(checkins, checkouts, breakins, breakouts):
+    if checkins.count() != checkouts.count():
+        return 'NA'
+
+    working_hours = sum((checkout.created_at - checkin.created_at).total_seconds() for checkin, checkout in zip(checkins, checkouts))
+    return working_hours
+
+def calculate_break_time(breakins, breakouts, checkins, checkouts):
+    if breakins.count() != breakouts.count():
+        return 'NA'
+
+    break_hours = sum((breakout.created_at - breakin.created_at).total_seconds() for breakin, breakout in zip(breakins, breakouts))
+    return break_hours
+
+def serialize_entries(checkins, checkouts, breakins, breakouts):
+    entries = list(checkins) + list(checkouts) + list(breakins) + list(breakouts)
+    sorted_entries = sorted(entries, key=lambda entry: entry.created_at)
+    return CheckBreakSerializer(sorted_entries, many=True).data
+
+
