@@ -399,6 +399,27 @@ def edit_agency(request, agency_id):
             'labourLicense', agency.labour_license)
         agency.pan = request.FILES.get('pan', agency.pan)
         agency.wcp = request.FILES.get('wcp', agency.wcp)
+        
+        clear_labour_license = request.data.get('clearLabourLicense', False)
+        clear_pan = request.data.get('clearPan', False)
+        clear_wcp = request.data.get('clearWcp', False)
+        print(clear_labour_license)
+        print(request.FILES.get('labourLicense', agency.labour_license))
+        if str(clear_labour_license) == 'true':
+            
+            agency.labour_license = None
+        else:
+            agency.labour_license = request.FILES.get('labourLicense', agency.labour_license)
+
+        if clear_pan == 'true':
+            agency.pan = None
+        else:
+            agency.pan = request.FILES.get('pan', agency.pan)
+
+        if clear_wcp == 'true':
+            agency.wcp = None
+        else:
+            agency.wcp = request.FILES.get('wcp', agency.wcp)
 
         agency.save()
 
