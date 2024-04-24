@@ -603,58 +603,111 @@ def get_and_create_contract_worker(request):
             print("Error:", e)
             return Response({"message": "Error creating UserAccount"}, status=500)
 
-
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import json
+from django.http import JsonResponse
 @api_view(['GET', 'PUT'])
 @permission_classes([])
 def update_contract_worker(request, worker_id):
     try:
         worker = get_object_or_404(UserAccount, id=worker_id)
+        print(worker)
 
         if request.method == 'GET':
             worker_serializer = UserAccountSerializer(worker)
             user_documents = UserDocument.objects.filter(user=worker)
             user_documents_serializer = UserDocumentSerializer(
                 user_documents, many=True)
+
+            sub_categories = SubCategory.objects.all()
+            subCategories_serializer = SubCategorySerializer(sub_categories , many = True)
+
             return Response({
                 "worker": worker_serializer.data,
-                "user_documents": user_documents_serializer.data
+                "user_documents": user_documents_serializer.data,
+                "subCategories": subCategories_serializer.data
             })
 
         elif request.method == 'PUT':
-            data = request.data
+            data = request.data.copy()
+
+            # Convert agency data to an instance of the Agency model
+            if 'agency' in data:
+                agency_id = data['agency']
+                agency_instance = get_object_or_404(Agency, id=agency_id)
+                data['agency'] = agency_instance
+
+            # Convert subcategory data to an instance of the SubCategory model
+            if 'sub_category' in data:
+                subcategory_id = data['sub_category']
+                subcategory_instance = get_object_or_404(SubCategory, id=subcategory_id)
+                data['sub_category'] = subcategory_instance
+
 
             # Update the fields if provided in the request data
             for field in ['first_name', 'last_name', 'email', 'password', 'emp_id',
-                          'phone_number', 'dob', 'agency', 'aadhaar_card', 'pan']:
+                          'phone_number', 'dob', 'agency','sub_category' ,'aadhaar_card', 'pan']:
                 if field in data:
                     setattr(worker, field, data[field])
 
             worker.save()
 
-            # Delete all existing user documents associated with the worker
-            user_documents = UserDocument.objects.filter(user=worker)
-            user_documents.delete()
+            clear_aadhaar = data.get('clearAadhaar') if str(data.get('clearAadhaar')) == 'true' else False
+            clear_pan = data.get('clearPan') if str(data.get('clearPan')) == 'true' else False
 
-            # Handle user_images
+            print('ad',clear_aadhaar)
+            print('pan',clear_pan)
+
+            if clear_aadhaar:
+                print('ad cleared')
+                worker.aadhaar_card = None
+            if clear_pan:
+                print('pan cleared')
+                worker.pan = None
+
+            worker.save()
+
+            if clear_aadhaar:
+                if 'aadhaar_card' in request.FILES:
+                    worker.aadhaar_card = request.FILES['aadhaar_card']
+            if clear_pan:
+                if 'pan' in request.FILES:
+                    worker.pan = request.FILES['pan']
+
+            worker.save()
+
+            # Handle user images
             user_images = request.FILES.getlist('user_images')
-            print('Number of user images received', len(user_images))
 
-            if user_images:
-                # Save the first image as user_image for the worker
-                worker.user_image = user_images[0]
+            # Get deleted images IDs from the frontend
+            deleted_image_ids = json.loads(data.get('deleted_images', '[]'))
 
-                # Save the rest of the images in UserDocument model
-                for image in user_images:
-                    UserDocument.objects.create(
-                        user=worker, document=image)
+            # Iterate over each deleted image ID
+            for image_id in deleted_image_ids:
+                try:
+                    # Try to retrieve the UserDocument object with the given ID
+                    image_to_delete = UserDocument.objects.get(pk=image_id)
+                    # Delete the image if it exists
+                    image_to_delete.delete()
+                    print(f"Deleted image with ID {image_id}")
+                except UserDocument.DoesNotExist:
+                    # Handle the case where the image with the given ID doesn't exist
+                    print(f"Image with ID {image_id} does not exist")
 
-                worker.save()
+            # Update existing user documents and create new ones if needed
+            for image_id in user_images:
+                # Check if the image already exists in UserDocument model
+                existing_document = UserDocument.objects.filter(user=worker, document=image_id).first()
+                if not existing_document:
+                    # If the image doesn't exist, create a new user document
+                    UserDocument.objects.create(user=worker, document=image_id)
 
-            return Response({"message": "Contract worker updated successfully"}, status=status.HTTP_200_OK)
+            return JsonResponse({"message": "Contract worker updated successfully"})
 
     except Exception as e:
         print("Error:", e)
         return Response({"message": "Error updating contract worker"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['GET', 'POST', 'DELETE', 'PUT'])
