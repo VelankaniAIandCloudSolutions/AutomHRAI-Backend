@@ -83,6 +83,7 @@ class UserAccountSerializer(serializers.ModelSerializer):
     full_name  = serializers.SerializerMethodField()
     agency = AgencySerializer()
     company = CompanySerializer()
+    sub_category = SubCategorySerializer()
 
     class Meta:
         model = UserAccount

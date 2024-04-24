@@ -596,19 +596,61 @@ def update_contract_worker(request, worker_id):
             worker_serializer = UserAccountSerializer(worker)
             user_documents = UserDocument.objects.filter(user=worker)
             user_documents_serializer = UserDocumentSerializer(user_documents, many=True)
+
+            sub_categories = SubCategory.objects.all()
+            subCategories_serializer = SubCategorySerializer(sub_categories , many = True)
+
             return Response({
                 "worker": worker_serializer.data,
-                "user_documents": user_documents_serializer.data
+                "user_documents": user_documents_serializer.data,
+                "subCategories": subCategories_serializer.data
             })
 
         elif request.method == 'PUT':
-            data = request.data
+            data = request.data.copy()
+
+            # Convert agency data to an instance of the Agency model
+            if 'agency' in data:
+                agency_id = data['agency']
+                agency_instance = get_object_or_404(Agency, id=agency_id)
+                data['agency'] = agency_instance
+
+            # Convert subcategory data to an instance of the SubCategory model
+            if 'sub_category' in data:
+                subcategory_id = data['sub_category']
+                subcategory_instance = get_object_or_404(SubCategory, id=subcategory_id)
+                data['sub_category'] = subcategory_instance
+
 
             # Update the fields if provided in the request data
             for field in ['first_name', 'last_name', 'email', 'password', 'emp_id',
-                          'phone_number', 'dob', 'agency', 'aadhaar_card', 'pan']:
+                          'phone_number', 'dob', 'agency','sub_category' ,'aadhaar_card', 'pan']:
                 if field in data:
                     setattr(worker, field, data[field])
+
+            worker.save()
+
+            clear_aadhaar = data.get('clearAadhaar') if str(data.get('clearAadhaar')) == 'true' else False
+            clear_pan = data.get('clearPan') if str(data.get('clearPan')) == 'true' else False
+
+            print('ad',clear_aadhaar)
+            print('pan',clear_pan)
+
+            if clear_aadhaar:
+                print('ad cleared')
+                worker.aadhaar_card = None
+            if clear_pan:
+                print('pan cleared')
+                worker.pan = None
+
+            worker.save()
+
+            if clear_aadhaar:
+                if 'aadhaar_card' in request.FILES:
+                    worker.aadhaar_card = request.FILES['aadhaar_card']
+            if clear_pan:
+                if 'pan' in request.FILES:
+                    worker.pan = request.FILES['pan']
 
             worker.save()
 
