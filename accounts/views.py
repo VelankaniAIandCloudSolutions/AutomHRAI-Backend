@@ -1,3 +1,4 @@
+import json
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import datetime
 from django.http import JsonResponse
@@ -399,17 +400,18 @@ def edit_agency(request, agency_id):
             'labourLicense', agency.labour_license)
         agency.pan = request.FILES.get('pan', agency.pan)
         agency.wcp = request.FILES.get('wcp', agency.wcp)
-        
+
         clear_labour_license = request.data.get('clearLabourLicense', False)
         clear_pan = request.data.get('clearPan', False)
         clear_wcp = request.data.get('clearWcp', False)
         print(clear_labour_license)
         print(request.FILES.get('labourLicense', agency.labour_license))
         if str(clear_labour_license) == 'true':
-            
+
             agency.labour_license = None
         else:
-            agency.labour_license = request.FILES.get('labourLicense', agency.labour_license)
+            agency.labour_license = request.FILES.get(
+                'labourLicense', agency.labour_license)
 
         if clear_pan == 'true':
             agency.pan = None
@@ -562,7 +564,7 @@ def get_and_create_contract_worker(request):
             pan = data.get('pan')
             dob = data.get('dob')
             # company = data.get('company')
-            company  = request.user.company 
+            company = request.user.company
             # Calculate age from date of birth
             if dob:
                 dob_date = datetime.strptime(dob, '%Y-%m-%d').date()
@@ -589,7 +591,7 @@ def get_and_create_contract_worker(request):
                 agency=agency,
                 sub_category=subcategory,
                 is_contract_worker=True,
-                company = company
+                company=company
                 # Pass any additional fields
             )
 
@@ -624,9 +626,7 @@ def get_and_create_contract_worker(request):
             print("Error:", e)
             return Response({"message": "Error creating UserAccount"}, status=500)
 
-from django.core.files.uploadedfile import InMemoryUploadedFile
-import json
-from django.http import JsonResponse
+
 @api_view(['GET', 'PUT'])
 @permission_classes([])
 def update_contract_worker(request, worker_id):
@@ -641,7 +641,8 @@ def update_contract_worker(request, worker_id):
                 user_documents, many=True)
 
             sub_categories = SubCategory.objects.all()
-            subCategories_serializer = SubCategorySerializer(sub_categories , many = True)
+            subCategories_serializer = SubCategorySerializer(
+                sub_categories, many=True)
 
             return Response({
                 "worker": worker_serializer.data,
@@ -661,23 +662,25 @@ def update_contract_worker(request, worker_id):
             # Convert subcategory data to an instance of the SubCategory model
             if 'sub_category' in data:
                 subcategory_id = data['sub_category']
-                subcategory_instance = get_object_or_404(SubCategory, id=subcategory_id)
+                subcategory_instance = get_object_or_404(
+                    SubCategory, id=subcategory_id)
                 data['sub_category'] = subcategory_instance
-
 
             # Update the fields if provided in the request data
             for field in ['first_name', 'last_name', 'email', 'password', 'emp_id',
-                          'phone_number', 'dob', 'agency','sub_category' ,'aadhaar_card', 'pan']:
+                          'phone_number', 'dob', 'agency', 'sub_category', 'aadhaar_card', 'pan']:
                 if field in data:
                     setattr(worker, field, data[field])
 
             worker.save()
 
-            clear_aadhaar = data.get('clearAadhaar') if str(data.get('clearAadhaar')) == 'true' else False
-            clear_pan = data.get('clearPan') if str(data.get('clearPan')) == 'true' else False
+            clear_aadhaar = data.get('clearAadhaar') if str(
+                data.get('clearAadhaar')) == 'true' else False
+            clear_pan = data.get('clearPan') if str(
+                data.get('clearPan')) == 'true' else False
 
-            print('ad',clear_aadhaar)
-            print('pan',clear_pan)
+            print('ad', clear_aadhaar)
+            print('pan', clear_pan)
 
             if clear_aadhaar:
                 print('ad cleared')
@@ -718,7 +721,8 @@ def update_contract_worker(request, worker_id):
             # Update existing user documents and create new ones if needed
             for image_id in user_images:
                 # Check if the image already exists in UserDocument model
-                existing_document = UserDocument.objects.filter(user=worker, document=image_id).first()
+                existing_document = UserDocument.objects.filter(
+                    user=worker, document=image_id).first()
                 if not existing_document:
                     # If the image doesn't exist, create a new user document
                     UserDocument.objects.create(user=worker, document=image_id)
@@ -728,7 +732,6 @@ def update_contract_worker(request, worker_id):
     except Exception as e:
         print("Error:", e)
         return Response({"message": "Error updating contract worker"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 @api_view(['GET', 'POST', 'DELETE', 'PUT'])

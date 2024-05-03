@@ -738,14 +738,14 @@ def assign_project(request):
             return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
+
 @api_view(['GET'])
 def get_contract_worker(request):
     contract_workers = UserAccount.objects.filter(is_contract_worker=True)
     serializer = UserAccountSerializer(contract_workers, many=True)
-    
+
     return Response({'user_data': serializer.data}, status=status.HTTP_200_OK)
-    
 
 
 @api_view(['GET'])
@@ -855,14 +855,15 @@ def get_attendance_report(request):
 
         return Response({'user_data': response_data}, status=status.HTTP_200_OK)
 
+
 @api_view(['GET', 'POST'])
 def get_contract_worker_timesheet(request):
     if request.method == 'GET':
         contract_workers = UserAccount.objects.filter(is_contract_worker=True)
         serializer = UserAccountSerializer(contract_workers, many=True)
-    
+
         return Response({'user_data': serializer.data}, status=status.HTTP_200_OK)
-    
+
     if request.method == 'POST':
         user_id = request.data.get('user_id')
 
@@ -887,9 +888,11 @@ def get_contract_worker_timesheet(request):
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
         if not start_date:
-            checkins = CheckInAndOut.objects.filter(user=user_id, type='checkin')
+            checkins = CheckInAndOut.objects.filter(
+                user=user_id, type='checkin')
             if checkins.exists():
-                earliest_checkin = checkins.order_by('created_at').first().created_at
+                earliest_checkin = checkins.order_by(
+                    'created_at').first().created_at
                 start_date = earliest_checkin.date()  # Extract the date part
             else:
                 return Response({'error': 'No checkin entries found'}, status=status.HTTP_400_BAD_REQUEST)
@@ -901,7 +904,8 @@ def get_contract_worker_timesheet(request):
 
         time_sheets = []
         for date in date_array:
-            work_time, break_time, entries = calculate_timesheet_for_date(user, date)
+            work_time, break_time, entries = calculate_timesheet_for_date(
+                user, date)
             user_data = {
                 'user_info': user.id,
                 'date': date,
@@ -913,6 +917,7 @@ def get_contract_worker_timesheet(request):
 
         return Response({'user_data': time_sheets}, status=status.HTTP_200_OK)
 
+
 def generate_date_array(start_date, end_date):
     date_array = []
     current_date = start_date
@@ -921,34 +926,313 @@ def generate_date_array(start_date, end_date):
         current_date += timedelta(days=1)
     return date_array
 
+
 def calculate_timesheet_for_date(user, date):
-    checkins = CheckInAndOut.objects.filter(user=user, type='checkin', created_at__date=date).order_by('created_at')
-    checkouts = CheckInAndOut.objects.filter(user=user, type='checkout', created_at__date=date).order_by('created_at')
-    breakins = BreakInAndOut.objects.filter(user=user, type='breakin', created_at__date=date).order_by('created_at')
-    breakouts = BreakInAndOut.objects.filter(user=user, type='breakout', created_at__date=date).order_by('created_at')
+    checkins = CheckInAndOut.objects.filter(
+        user=user, type='checkin', created_at__date=date).order_by('created_at')
+    checkouts = CheckInAndOut.objects.filter(
+        user=user, type='checkout', created_at__date=date).order_by('created_at')
+    breakins = BreakInAndOut.objects.filter(
+        user=user, type='breakin', created_at__date=date).order_by('created_at')
+    breakouts = BreakInAndOut.objects.filter(
+        user=user, type='breakout', created_at__date=date).order_by('created_at')
     work_time = calculate_work_time(checkins, checkouts, breakins, breakouts)
     break_time = calculate_break_time(breakins, breakouts, checkins, checkouts)
     entries = serialize_entries(checkins, checkouts, breakins, breakouts)
 
     return work_time, break_time, entries
 
+
 def calculate_work_time(checkins, checkouts, breakins, breakouts):
     if checkins.count() != checkouts.count():
         return 'NA'
 
-    working_hours = sum((checkout.created_at - checkin.created_at).total_seconds() for checkin, checkout in zip(checkins, checkouts))
+    working_hours = sum((checkout.created_at - checkin.created_at).total_seconds()
+                        for checkin, checkout in zip(checkins, checkouts))
     return working_hours
+
 
 def calculate_break_time(breakins, breakouts, checkins, checkouts):
     if breakins.count() != breakouts.count():
         return 'NA'
 
-    break_hours = sum((breakout.created_at - breakin.created_at).total_seconds() for breakin, breakout in zip(breakins, breakouts))
+    break_hours = sum((breakout.created_at - breakin.created_at).total_seconds()
+                      for breakin, breakout in zip(breakins, breakouts))
     return break_hours
 
+
 def serialize_entries(checkins, checkouts, breakins, breakouts):
-    entries = list(checkins) + list(checkouts) + list(breakins) + list(breakouts)
+    entries = list(checkins) + list(checkouts) + \
+        list(breakins) + list(breakouts)
     sorted_entries = sorted(entries, key=lambda entry: entry.created_at)
     return CheckBreakSerializer(sorted_entries, many=True).data
 
 
+@api_view(['GET'])
+def get_agencies_and_contract_workers(request):
+    try:
+        if request.method == 'GET':
+            agencies = Agency.objects.all()
+            agency_serializer = AgencySerializer(agencies, many=True)
+
+            contract_workers = UserAccount.objects.filter(
+                is_contract_worker=True)
+            contract_worker_serializer = UserAccountSerializer(
+                contract_workers, many=True)
+
+            return Response({'agencies': agency_serializer.data, 'contract_workers': contract_worker_serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# @api_view(['POST'])
+# def calculate_monthly_contract_worker_timesheet_report(request):
+#     try:
+#         # Extract formData from request
+
+#         # Extract data from formData
+#         agency_id = request.data.get("agency")
+
+#         month = request.data.get("month")
+#         print(month)
+#         year = request.data.get("year")
+#         print(year)
+
+#         # Assuming worker IDs are sent as a list
+#         worker_ids = request.data.get("workers")
+#         print(worker_ids)
+
+#         if year is None or month is None:
+#             return Response({"error": "Year or month is missing from the request."}, status=400)
+
+#         # Convert month to its equivalent integer representation
+#         month_dict = {
+#             "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4,
+#             "May": 5, "Jun": 6, "Jul": 7, "Aug": 8,
+#             "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12
+#         }
+#         month_int = month_dict.get(month)
+
+#         if month_int is None:
+#             return Response({"error": "Invalid month provided."}, status=400)
+
+#         # Convert year to integer if it's a valid integer
+#         try:
+#             year_int = int(year)
+#         except ValueError:
+#             return Response({"error": "Year must be a valid integer."}, status=400)
+
+#         # Get workers based on the provided IDs and conditions
+#         if agency_id and worker_ids:  # Condition 1: Both agency and worker IDs provided
+#             workers = UserAccount.objects.filter(
+#                 id__in=worker_ids, agency_id=agency_id, is_contract_worker=True)
+#         elif agency_id:  # Condition 2: Only agency ID provided
+#             workers = UserAccount.objects.filter(
+#                 agency_id=agency_id, is_contract_worker=True)
+#         elif worker_ids:  # Condition 3: Only worker IDs provided
+#             workers = UserAccount.objects.filter(
+#                 id__in=worker_ids, is_contract_worker=True)
+#         else:
+#             # No agency or worker IDs provided
+#             workers = UserAccount.objects.filter(
+#                 is_contract_worker=True)
+
+#         # Dictionary to store timesheet data
+#         timesheet_data = {}
+
+#         # Iterate through each worker
+#         for worker in workers:
+#             timesheet_data[f"{worker.first_name} {worker.last_name}"] = {}
+#             # Fetch agency and subcategory details for the current worker
+#             agency_name = worker.agency.name if worker.agency else None
+#             subcategory_name = worker.sub_category.name if worker.sub_category else None
+#             # Iterate through each day of the selected month
+#             for day in range(1, 32):
+#                 try:
+#                     # Get the date of the current day in the loop
+#                     current_date = datetime(int(year), month_int, day)
+#                     print(current_date)
+
+#                     # Get check-ins and check-outs for the current day
+#                     check_ins = CheckInAndOut.objects.filter(
+#                         user=worker, type='checkin', created_at__date=current_date)
+#                     check_outs = CheckInAndOut.objects.filter(
+#                         user=worker, type='checkout', created_at__date=current_date)
+
+#                     # Calculate total effective working time for the current day
+#                     effective_working_time = calculate_effective_working_time(
+#                         check_ins, check_outs)
+
+#                     # Calculate total break time for the current day
+#                     total_break_time = calculate_total_break_time(
+#                         check_ins, check_outs)
+
+#                     # Determine status (Present or Absent) for the current day
+#                     status = "Present" if check_ins.exists() else "Absent"
+
+#                     # Store data for the current day in the timesheet_data dictionary
+#                     timesheet_data[f"{worker.first_name} {worker.last_name}"][current_date.strftime("%Y-%m-%d")] = {
+#                         "status": status,
+#                         "effective_working_time": effective_working_time,
+#                         "total_break_time": total_break_time,
+#                         "agency": agency_name,
+#                         "sub_category": subcategory_name
+#                     }
+#                 except ValueError:  # Handle if the day is out of range for the month
+#                     pass
+
+#         return Response(timesheet_data)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=400)
+
+
+# def calculate_effective_working_time(check_ins, check_outs):
+#     try:
+#         # Calculate effective working time for a single day
+#         total_working_time = timedelta(seconds=0)
+#         for check_in, check_out in zip(check_ins, check_outs):
+#             effective_working_time = check_out.created_at - check_in.created_at
+#             if effective_working_time > timedelta(seconds=0):
+#                 total_working_time += effective_working_time
+#         return total_working_time.total_seconds()
+#     except Exception as e:
+#         return 0
+
+
+# def calculate_total_break_time(check_ins, check_outs):
+#     try:
+#         # Calculate total break time for a single day
+#         total_break_time = sum((check_out.created_at - check_in.created_at).total_seconds()
+#                                for check_in, check_out in zip(check_ins, check_outs))
+#         return total_break_time
+#     except Exception as e:
+#         return 0
+
+@api_view(['POST'])
+def calculate_monthly_contract_worker_timesheet_report(request):
+    try:
+        # Extract formData from request
+        agency_id = request.data.get("agency")
+        month = request.data.get("month")
+        year = request.data.get("year")
+        worker_ids = request.data.get("workers")
+
+        if year is None or month is None:
+            return Response({"error": "Year or month is missing from the request."}, status=400)
+
+        # Convert month to its equivalent integer representation
+        month_dict = {
+            "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4,
+            "May": 5, "Jun": 6, "Jul": 7, "Aug": 8,
+            "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12
+        }
+        month_int = month_dict.get(month)
+
+        if month_int is None:
+            return Response({"error": "Invalid month provided."}, status=400)
+
+        # Convert year to integer if it's a valid integer
+        try:
+            year_int = int(year)
+        except ValueError:
+            return Response({"error": "Year must be a valid integer."}, status=400)
+
+        # Get workers based on the provided IDs and conditions
+        if agency_id and worker_ids:
+            workers = UserAccount.objects.filter(
+                id__in=worker_ids, agency_id=agency_id, is_contract_worker=True)
+        elif agency_id:
+            workers = UserAccount.objects.filter(
+                agency_id=agency_id, is_contract_worker=True)
+        elif worker_ids:
+            workers = UserAccount.objects.filter(
+                id__in=worker_ids, is_contract_worker=True)
+        else:
+            workers = UserAccount.objects.filter(
+                is_contract_worker=True)
+
+        # List to store timesheet data for each contract worker
+        timesheet_data = []
+
+        # Iterate through each worker
+        for worker in workers:
+            # Fetch agency and subcategory details for the current worker
+            agency_name = worker.agency.name if worker.agency else None
+            subcategory_name = worker.sub_category.name if worker.sub_category else None
+
+            # Create dictionary for the contract worker
+            contract_worker_data = {
+                "contract_worker_name": f"{worker.first_name} {worker.last_name}",
+                "agency": agency_name,
+                "subcategory": subcategory_name
+            }
+
+            # Dictionary to store daily timesheet data
+            daily_timesheet_data = {}
+
+            # Iterate through each day of the selected month
+            for day in range(1, 31):  # Assuming maximum 30 days in a month
+                try:
+                    # Get the date of the current day in the loop
+                    current_date = datetime(year_int, month_int, day)
+
+                    # Get check-ins and check-outs for the current day
+                    check_ins = CheckInAndOut.objects.filter(
+                        user=worker, type='checkin', created_at__date=current_date)
+                    check_outs = CheckInAndOut.objects.filter(
+                        user=worker, type='checkout', created_at__date=current_date)
+
+                    # Calculate total effective working time for the current day
+                    effective_working_time = calculate_effective_working_time(
+                        check_ins, check_outs)
+
+                    # Calculate total break time for the current day
+                    total_break_time = calculate_total_break_time(
+                        check_ins, check_outs)
+
+                    # Determine status (Present or Absent) for the current day
+                    status = "Present" if check_ins.exists() else "Absent"
+
+                    # Store daily timesheet data
+                    daily_timesheet_data[current_date.strftime("%Y-%m-%d")] = {
+                        "status": status,
+                        "effective_working_time": effective_working_time,
+                        "total_break_time": total_break_time
+                    }
+                except ValueError:  # Handle if the day is out of range for the month
+                    pass
+
+            # Add daily timesheet data to contract worker data
+            contract_worker_data.update(daily_timesheet_data)
+
+            # Append contract worker data to timesheet_data list
+            timesheet_data.append(contract_worker_data)
+
+        return Response(timesheet_data)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+
+def calculate_effective_working_time(check_ins, check_outs):
+    try:
+        # Calculate effective working time for a single day
+        total_working_time = timedelta(seconds=0)
+        for check_in, check_out in zip(check_ins, check_outs):
+            effective_working_time = check_out.created_at - check_in.created_at
+            if effective_working_time > timedelta(seconds=0):
+                total_working_time += effective_working_time
+        return total_working_time.total_seconds()
+    except Exception as e:
+        return 0
+
+
+def calculate_total_break_time(check_ins, check_outs):
+    try:
+        # Calculate total break time for a single day
+        total_break_time = sum((check_out.created_at - check_in.created_at).total_seconds()
+                               for check_in, check_out in zip(check_ins, check_outs))
+        return total_break_time
+    except Exception as e:
+        return 0
