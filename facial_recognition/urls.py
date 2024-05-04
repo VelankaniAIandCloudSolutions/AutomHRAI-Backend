@@ -4,7 +4,8 @@ from . import views
 
 urlpatterns = [
     path('upload_photo/', upload_photo, name='upload_photo'),
-    path('get_classify_face_task_result/<str:task_id>', views.get_classify_face_task_result),
+    path('get_classify_face_task_result/<str:task_id>',
+         views.get_classify_face_task_result),
     path('mark_attendance_without_login/', mark_attendance_without_login,
          name='mark_attendance_without_login'),
     path('assign_project/', assign_project, name='assign_project'),
@@ -18,5 +19,11 @@ urlpatterns = [
     path('get_contract_worker_attendance',  get_contract_worker_attendance,
          name='get_contract_worker_attendance'),
     path('contract-workers/attendance-report/', views.get_attendance_report),
-    path('get_contract_worker_timesheet/',get_contract_worker_timesheet , name='get_contract_worker_timesheet')
+    path('get_contract_worker_timesheet/', get_contract_worker_timesheet,
+         name='get_contract_worker_timesheet'),
+    path('get-agencies-and-contract-workers/',
+         views.get_agencies_and_contract_workers),
+    path('calculate-monthly-contract-worker-timesheet-report/',
+         views.calculate_monthly_contract_worker_timesheet_report)
+
 ]
