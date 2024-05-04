@@ -43,6 +43,7 @@ from django.core.cache import cache
 from automhrai.utils import upload_file_to_s3
 from django.conf import settings
 import calendar
+import datetime
 
 
 @api_view(['POST'])
@@ -424,7 +425,8 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']
+        : entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -674,10 +676,14 @@ def get_contract_worker_attendance(request):
 
     all_entries = []
     if request.data.get('date'):
+        print('isndie if')
         selected_date = request.data.get('date')
+
     else:
         selected_date = datetime.date.today()
-    print(selected_date)
+        print('isndie else')
+
+    print('this is the selected date', selected_date)
     for user in contract_workers:
         user_check_ins = CheckInAndOut.objects.filter(
             user=user, created_at__date=selected_date)
