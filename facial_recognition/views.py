@@ -43,6 +43,7 @@ from django.core.cache import cache
 from automhrai.utils import upload_file_to_s3
 from django.conf import settings
 import calendar
+from django.db.models import Count
 import datetime
 
 
@@ -425,8 +426,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']
-        : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -1191,7 +1191,7 @@ def calculate_monthly_contract_worker_timesheet_report(request):
             for day in range(1, num_days_in_month + 1):
                 try:
                     # Get the date of the current day in the loop
-                    current_date = datetime(year_int, month_int, day)
+                    current_date = datetime.date(year_int, month_int, day)
 
                     # Get check-ins and check-outs for the current day
                     check_ins = CheckInAndOut.objects.filter(
