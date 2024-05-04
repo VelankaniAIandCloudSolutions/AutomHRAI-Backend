@@ -895,3 +895,55 @@ def get_delete_and_create_subcategories(request, subcategory_id=None):
                 return Response({"error": "Subcategory ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
         except SubCategory.DoesNotExist:
             return Response({"error": "Subcategory not found"}, status=status.HTTP_404_NOT_FOUND)
+
+import pandas as pd
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def upload_face_recognition_data(request):
+    excel_file_path = './media/face_recognition_data_format.xlsx'
+    
+    agency_df = pd.read_excel(excel_file_path, sheet_name='Agencies Format')
+    for index, row in agency_df.iterrows():
+        agency_name = row['Agency Name']
+        owner_name = row['Owner Name']
+        gst = row['GST No']
+        
+        agency, created = Agency.objects.update_or_create(
+            name=agency_name,
+            agency_owner=owner_name,
+            gst=gst
+        )
+    print(agency_name)
+    
+    category_df = pd.read_excel(excel_file_path, sheet_name='Sub Categories Format')
+    
+    for index, row in category_df.iterrows():
+        category_name = row['Category']
+        sub_category_name = row['Sub Category']
+        
+        category, created = Category.objects.update_or_create(name=category_name)
+        subcategory, created = SubCategory.objects.update_or_create(name=sub_category_name, category=category)
+    
+    location_df = pd.read_excel(excel_file_path, sheet_name='Locations Format')
+    
+    for index, row in location_df.iterrows():
+        location_name = row['Location Name']
+        
+        location, created = Location.objects.update_or_create(name=location_name)
+        
+    project_df = pd.read_excel(excel_file_path, sheet_name='Projects Format')
+    
+    for index, row in project_df.iterrows():
+        project_name = row['Project Name']
+        location_name = row['Location']
+        category_name = row['Category']
+        
+        category, created = Category.objects.update_or_create(name=category_name)
+        try:
+            location = Location.objects.get(name=location_name)
+        except Location.DoesNotExist:
+            pass        
+        project, created = Project.objects.update_or_create(name=project_name, location=location, category=category)
+    
+    return Response("Data uploaded successfully.")
