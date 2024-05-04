@@ -42,6 +42,7 @@ from .tasks import *
 from django.core.cache import cache
 from automhrai.utils import upload_file_to_s3
 from django.conf import settings
+import calendar
 
 
 @api_view(['POST'])
@@ -423,8 +424,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']
-        : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -1139,21 +1139,32 @@ def calculate_monthly_contract_worker_timesheet_report(request):
             return Response({"error": "Year must be a valid integer."}, status=400)
 
         # Get workers based on the provided IDs and conditions
-        if agency_id and worker_ids:
-            workers = UserAccount.objects.filter(
-                id__in=worker_ids, agency_id=agency_id, is_contract_worker=True)
-        elif agency_id:
-            workers = UserAccount.objects.filter(
-                agency_id=agency_id, is_contract_worker=True)
-        elif worker_ids:
-            workers = UserAccount.objects.filter(
-                id__in=worker_ids, is_contract_worker=True)
+        # Check if "All Workers" option is selected
+        if worker_ids == ["All_Workers"]:
+            # Fetch all workers
+            print('inside all workers selected option ')
+            workers = UserAccount.objects.filter(is_contract_worker=True)
         else:
-            workers = UserAccount.objects.filter(
-                is_contract_worker=True)
+            # Fetch workers based on the provided IDs and conditions
+            if agency_id and worker_ids:
+                workers = UserAccount.objects.filter(
+                    id__in=worker_ids, agency_id=agency_id, is_contract_worker=True)
+            elif agency_id:
+                workers = UserAccount.objects.filter(
+                    agency_id=agency_id, is_contract_worker=True)
+            elif worker_ids:
+                workers = UserAccount.objects.filter(
+                    id__in=worker_ids, is_contract_worker=True)
+            else:
+                print('neither agency nor worker ids')
+                workers = UserAccount.objects.filter(
+                    is_contract_worker=True)
 
         # List to store timesheet data for each contract worker
         timesheet_data = []
+
+        num_days_in_month = calendar.monthrange(year_int, month_int)[1]
+        print('num of days in selected month', num_days_in_month)
 
         # Iterate through each worker
         for worker in workers:
@@ -1171,8 +1182,7 @@ def calculate_monthly_contract_worker_timesheet_report(request):
             # Dictionary to store daily timesheet data
             daily_timesheet_data = {}
 
-            # Iterate through each day of the selected month
-            for day in range(1, 31):  # Assuming maximum 30 days in a month
+            for day in range(1, num_days_in_month + 1):
                 try:
                     # Get the date of the current day in the loop
                     current_date = datetime(year_int, month_int, day)
