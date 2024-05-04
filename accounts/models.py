@@ -69,13 +69,17 @@ class Agency(BaseModel):
         return self.name
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            super().save(*args, **kwargs)  # Save the object to assign the primary key
-            # Assign agency_id based on the auto-generated primary key
-            self.agency_id = f"A-{self.pk:06}"
-            self.save()  # Save again to update agency_id
-        else:
-            super().save(*args, **kwargs)
+        try:
+            if not self.pk:
+                super().save(*args, **kwargs)  # Save the object to assign the primary key
+                # Assign agency_id based on the auto-generated primary key
+                self.agency_id = f"A-{self.pk:06}"
+                self.save()  # Save again to update agency_id
+            else:
+                super().save(*args, **kwargs)
+        except Exception as e:
+            # Handle the exception here
+            print(f"Error occurred while saving: {e}")
 
 
 class Category(BaseModel):
@@ -169,6 +173,19 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        try:
+            if not self.pk:
+                super().save(*args, **kwargs)  # Save the object to assign the primary key
+                # Assign emp_id based on the auto-generated primary key
+                self.emp_id = f"CW-{self.pk:06}"
+                self.save()  # Save again to update agency_id
+            else:
+                super().save(*args, **kwargs)
+        except Exception as e:
+            # Handle the exception here
+            print(f"Error occurred while saving: {e}")
 
 
 class UserDocument(BaseModel):
