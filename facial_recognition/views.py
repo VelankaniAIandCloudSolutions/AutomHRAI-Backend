@@ -677,14 +677,11 @@ def get_contract_worker_attendance(request):
 
     all_entries = []
     if request.data.get('date'):
-        print('isndie if')
         selected_date = request.data.get('date')
 
     else:
         selected_date = datetime.date.today()
-        print('isndie else')
 
-    print('this is the selected date', selected_date)
     for user in contract_workers:
         user_check_ins = CheckInAndOut.objects.filter(
             user=user, created_at__date=selected_date)
@@ -693,11 +690,9 @@ def get_contract_worker_attendance(request):
 
         user_entries = list(user_check_ins) + list(user_break_ins)
 
-        sorted_user_entries = sorted(
-            user_entries, key=lambda entry: entry.created_at, reverse=True)
-
-        all_entries.extend(sorted_user_entries)
-
+        all_entries.extend(user_entries)
+        
+    all_entries.sort(key=lambda entry: entry.created_at, reverse=True)
     entry_serializer = CheckBreakSerializer(all_entries, many=True)
     projects = Project.objects.all()
     projects_serializer = ProjectSerializer(projects, many=True)
