@@ -1315,7 +1315,7 @@ def parse_excel_contract_workers_creation(request):
                     if existing_emails.exists():
                         # Generate a sequential number
                         sequential_number = generate_sequential_number()
-                        email = f"{first_name.replace(' ', '').lower()}.{sequential_number}@automhr.com"
+                        email = f"{first_name.replace(' ', '').lower()}{sequential_number}@automhr.com"
 
                     password = "password"
 
