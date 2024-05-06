@@ -179,8 +179,10 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
             if not self.pk:
                 super().save(*args, **kwargs)  # Save the object to assign the primary key
                 # Assign emp_id based on the auto-generated primary key
-                self.emp_id = f"CW-{self.pk:06}"
-                self.save()  # Save again to update agency_id
+
+                if self.is_contract_worker:
+                    self.emp_id = f"CW-{self.pk:06}"
+                    self.save()  # Save again to update agency_id
             else:
                 super().save(*args, **kwargs)
         except Exception as e:

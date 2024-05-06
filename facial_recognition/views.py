@@ -1275,7 +1275,7 @@ def parse_excel_contract_workers_creation(request):
                     last_name = row['Last Name']
                     subcategory_name = row['Subcategory']
                     agency_name = row['Agency Name']
-                    mobile_number = row.get('Mobile Number(Optional)', None)
+                    mobile_number = row.get('Mobile Number (Optional)', None)
                     dob = row.get('DOB(Optional)', None)
 
                     # Check if dob is NaT (missing or invalid date)
@@ -1285,8 +1285,15 @@ def parse_excel_contract_workers_creation(request):
                     if pd.isna(last_name) or last_name == "":
                         last_name = None
 
+                    # Convert mobile number to string to remove decimal part
+                    if pd.notna(mobile_number):
+                        mobile_number = str(int(mobile_number))
+                    else:
+                        mobile_number = None
+
                     # Print extracted data
-                    # print(f"First Name: {first_name}, Last Name: {last_name}, Subcategory: {subcategory_name}, Agency: {agency_name}, DOB: {dob}")
+                    print(
+                        f"First Name: {first_name}, Last Name: {last_name}, Subcategory: {subcategory_name}, Agency: {agency_name}, DOB: {dob}, Mobile Number :{mobile_number}")
 
                     # Retrieve or create SubCategory and Agency objects
                     subcategory, _ = SubCategory.objects.get_or_create(
@@ -1318,12 +1325,13 @@ def parse_excel_contract_workers_creation(request):
                         entries_updated += 1
 
                     # Print created/updated user account object
-                    # print(f"User account created/updated: {user_account}")
+                    print(f"User account created/updated: {user_account}")
 
-                # print(f"{entries_created} entries created and {entries_updated} entries updated successfully.")
+                print(
+                    f"{entries_created} entries created and {entries_updated} entries updated successfully.")
                 return Response({'message': f'{entries_created} entries created and {entries_updated} entries updated successfully.'})
             except Exception as e:
-                # print(f"An error occurred: {e}")  # Print the exception
+                print(f"An error occurred: {e}")  # Print the exception
                 return Response({'error': str(e)}, status=500)
         else:
             return Response({'error': 'Please upload a valid Excel file.'}, status=400)
