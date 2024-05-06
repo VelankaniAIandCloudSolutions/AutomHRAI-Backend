@@ -714,6 +714,10 @@ def update_contract_worker(request, worker_id):
                     # Try to retrieve the UserDocument object with the given ID
                     image_to_delete = UserDocument.objects.get(pk=image_id)
                     # Delete the image if it exists
+                    if worker.user_image == image_to_delete.document:
+                        worker.user_image = None
+                        worker.save()
+
                     image_to_delete.delete()
                     print(f"Deleted image with ID {image_id}")
                 except UserDocument.DoesNotExist:
@@ -729,6 +733,8 @@ def update_contract_worker(request, worker_id):
                     # If the image doesn't exist, create a new user document
                     UserDocument.objects.create(user=worker, document=image_id)
 
+            worker.user_image = user_images[0] if user_images else None
+            worker.save()
             return JsonResponse({"message": "Contract worker updated successfully"})
 
     except Exception as e:
