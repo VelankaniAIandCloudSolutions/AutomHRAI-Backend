@@ -1,3 +1,4 @@
+import random
 from django.db.models import Q
 from collections import defaultdict
 import pandas as pd
@@ -1255,6 +1256,11 @@ def calculate_total_break_time(check_ins, check_outs):
         return 0
 
 
+def generate_sequential_number():
+    # Assuming you have a function to generate unique sequential numbers
+    return random.randint(1000, 9999)
+
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
@@ -1302,6 +1308,15 @@ def parse_excel_contract_workers_creation(request):
 
                     # Creating email and password
                     email = f"{first_name.replace(' ', '').lower()}@automhr.com"
+
+                    # Check if email already exists in the database
+                    existing_emails = UserAccount.objects.filter(email=email)
+
+                    if existing_emails.exists():
+                        # Generate a sequential number
+                        sequential_number = generate_sequential_number()
+                        email = f"{first_name.replace(' ', '').lower()}.{sequential_number}@automhr.com"
+
                     password = "password"
 
                     # Update or create UserAccount object
