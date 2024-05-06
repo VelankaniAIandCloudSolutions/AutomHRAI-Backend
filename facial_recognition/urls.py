@@ -24,6 +24,8 @@ urlpatterns = [
     path('get-agencies-and-contract-workers/',
          views.get_agencies_and_contract_workers),
     path('calculate-monthly-contract-worker-timesheet-report/',
-         views.calculate_monthly_contract_worker_timesheet_report)
+         views.calculate_monthly_contract_worker_timesheet_report),
+    path('parse_excel_for_contract_workers_creation/',
+         views.parse_excel_contract_workers_creation)
 
 ]

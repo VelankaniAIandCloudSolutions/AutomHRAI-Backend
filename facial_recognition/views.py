@@ -1,5 +1,6 @@
 from django.db.models import Q
 from collections import defaultdict
+import pandas as pd
 import pytz
 from django.shortcuts import render
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -426,7 +427,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -1252,3 +1253,79 @@ def calculate_total_break_time(check_ins, check_outs):
         return total_break_time
     except Exception as e:
         return 0
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([])
+def parse_excel_contract_workers_creation(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        excel_file = request.FILES['file']
+        if excel_file.name.endswith('.xlsx'):
+            try:
+                df = pd.read_excel(excel_file)
+                print(df.head())  # Print the first 5 rows of the DataFrame
+                entries_created = 0
+                entries_updated = 0  # Counter for updated entries
+                for index, row in df.iterrows():
+                    # Extracting data from each row
+                    # Print row index being processed
+                    # print(f"Processing row {index + 1}...")
+                    first_name = row['First Name']
+                    last_name = row['Last Name']
+                    subcategory_name = row['Subcategory']
+                    agency_name = row['Agency Name']
+                    mobile_number = row.get('Mobile Number(Optional)', None)
+                    dob = row.get('DOB(Optional)', None)
+
+                    # Check if dob is NaT (missing or invalid date)
+                    if pd.isna(dob):
+                        dob = None  # Set dob to None
+                    # Check if last name is empty, set to None
+                    if pd.isna(last_name) or last_name == "":
+                        last_name = None
+
+                    # Print extracted data
+                    # print(f"First Name: {first_name}, Last Name: {last_name}, Subcategory: {subcategory_name}, Agency: {agency_name}, DOB: {dob}")
+
+                    # Retrieve or create SubCategory and Agency objects
+                    subcategory, _ = SubCategory.objects.get_or_create(
+                        name=subcategory_name)
+                    agency, _ = Agency.objects.get_or_create(name=agency_name)
+
+                    # Creating email and password
+                    email = f"{first_name.replace(' ', '').lower()}@automhr.com"
+                    password = "password"
+
+                    # Update or create UserAccount object
+                    user_account, created = UserAccount.objects.update_or_create(
+                        email=email,
+                        defaults={
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'sub_category': subcategory,
+                            'agency': agency,
+                            'phone_number': mobile_number,
+                            'dob': dob,
+                            'is_contract_worker': True
+                        }
+                    )
+
+                    # Increment counters based on operation
+                    if created:
+                        entries_created += 1
+                    else:
+                        entries_updated += 1
+
+                    # Print created/updated user account object
+                    # print(f"User account created/updated: {user_account}")
+
+                # print(f"{entries_created} entries created and {entries_updated} entries updated successfully.")
+                return Response({'message': f'{entries_created} entries created and {entries_updated} entries updated successfully.'})
+            except Exception as e:
+                # print(f"An error occurred: {e}")  # Print the exception
+                return Response({'error': str(e)}, status=500)
+        else:
+            return Response({'error': 'Please upload a valid Excel file.'}, status=400)
+    else:
+        return Response({'error': 'Invalid request method or file not provided.'}, status=400)
