@@ -21,7 +21,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime
 
 from facial_recognition.models import *
-
+import os
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -634,7 +634,6 @@ def get_and_create_contract_worker(request):
 def update_contract_worker(request, worker_id):
     try:
         worker = get_object_or_404(UserAccount, id=worker_id)
-        print(worker)
 
         if request.method == 'GET':
             worker_serializer = UserAccountSerializer(worker)
@@ -705,6 +704,13 @@ def update_contract_worker(request, worker_id):
             # Handle user images
             user_images = request.FILES.getlist('user_images')
 
+            for idx, file in enumerate(user_images):
+                if file.name == "captured_photo.jpg":
+                    timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+                    file_extension = os.path.splitext(file.name)[1]
+                    unique_filename = f"captured_photo_{timestamp}{file_extension}"
+                    user_images[idx].name = unique_filename
+            
             # Get deleted images IDs from the frontend
             deleted_image_ids = json.loads(data.get('deleted_images', '[]'))
 
