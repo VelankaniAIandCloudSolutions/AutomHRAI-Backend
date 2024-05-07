@@ -166,7 +166,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     def get_full_name(self):
         if self.last_name and self.first_name:
             return "{fname} {lname}".format(fname=self.first_name, lname=self.last_name)
-        elif not self.last_name :
+        elif not self.last_name:
             return "{fname}".format(fname=self.first_name)
         else:
             return ""
