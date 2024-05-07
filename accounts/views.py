@@ -1,3 +1,4 @@
+import random
 import pandas as pd
 import json
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -528,6 +529,11 @@ def get_and_delete_contract_workers(request, contract_worker_id=None):
             return Response({"error": "Contract worker not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
+def generate_sequential_number():
+    # Assuming you have a function to generate unique sequential numbers
+    return random.randint(1000, 9999)
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([])
 def get_and_create_contract_worker(request):
@@ -579,7 +585,13 @@ def get_and_create_contract_worker(request):
             print("Calculated age:", age)
 
             # Create the UserAccount object
-            email = email.lower()
+
+            existing_emails = UserAccount.objects.filter(email=email)
+
+            if existing_emails.exists():
+                # Generate a sequential number
+                sequential_number = generate_sequential_number()
+                email = f"{first_name.replace(' ', '').lower()}{sequential_number}@automhr.com"
             user_account = UserAccount.objects.create(
                 first_name=first_name,
                 last_name=last_name,
@@ -672,6 +684,14 @@ def update_contract_worker(request, worker_id):
                           'phone_number', 'dob', 'agency', 'sub_category', 'aadhaar_card', 'pan']:
                 if field in data:
                     setattr(worker, field, data[field])
+
+                if 'email' in data:
+                    email = data['email']
+                    existing_emails = UserAccount.objects.filter(email=email)
+                    if existing_emails.exists():
+                        sequential_number = generate_sequential_number()
+                        new_email = f"{worker.first_name.replace(' ', '').lower()}{sequential_number}@automhr.com"
+                        setattr(worker, 'email', new_email)
 
             worker.save()
 
