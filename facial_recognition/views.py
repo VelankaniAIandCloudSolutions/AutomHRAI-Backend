@@ -1347,3 +1347,33 @@ def parse_excel_contract_workers_creation(request):
             return Response({'error': 'Please upload a valid Excel file.'}, status=400)
     else:
         return Response({'error': 'Invalid request method or file not provided.'}, status=400)
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([])
+def create_check_in_out(request):
+    if request.method == 'POST':
+        try:
+            user_email = request.data.get('email')
+            user = UserAccount.objects.get(email=user_email)
+            image_file = request.FILES.get('image')
+            today = timezone.now().date()
+            check_in_exists = CheckInAndOut.objects.filter(user=user, created_at__date=today).exists()
+            
+            if check_in_exists:
+                type = 'checkout'
+            else:
+                type = 'checkin'
+            
+            check_in_out = CheckInAndOut.objects.create(
+                user=user, type=type)
+            if image_file:
+                check_in_out.image.save(image_file.name, ContentFile(image_file.read()), save=True)
+            
+            serializer = CheckInAndOutSerializer(check_in_out)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except UserAccount.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
