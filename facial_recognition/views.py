@@ -47,6 +47,8 @@ from django.conf import settings
 import calendar
 from django.db.models import Count
 import datetime
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 @api_view(['POST'])
@@ -1383,7 +1385,17 @@ def create_check_in_out(request):
 
                 check_in_out.image = image_url
                 check_in_out.save()
+
                 serializer = CheckInAndOutSerializer(check_in_out)
+
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    'check_in_out_create_group', 
+                    {
+                        'type': 'send_check_in_out_data',
+                        'check_in_out_data': serializer.data,
+                    }
+                )
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except Exception as e:
