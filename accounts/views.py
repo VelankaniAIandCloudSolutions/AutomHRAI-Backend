@@ -514,7 +514,8 @@ def edit_agency(request, agency_id):
 def get_and_delete_contract_workers(request, contract_worker_id=None):
     if request.method == 'GET':
         # Retrieve all contract workers
-        contract_workers = UserAccount.objects.filter(is_contract_worker=True)
+        contract_workers = UserAccount.objects.filter(
+            is_contract_worker=True).order_by('-created_at')
         serializer = UserAccountSerializer(contract_workers, many=True)
         data = {"contract_workers": serializer.data}
         return Response(data, status=status.HTTP_200_OK)
