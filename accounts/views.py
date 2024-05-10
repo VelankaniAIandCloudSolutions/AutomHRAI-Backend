@@ -23,6 +23,10 @@ from datetime import datetime
 
 from facial_recognition.models import *
 import os
+from django.core.exceptions import ObjectDoesNotExist
+from urllib.parse import urlparse
+from django.db.models import Q
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -641,6 +645,12 @@ def get_and_create_contract_worker(request):
             return Response({"message": "Error creating UserAccount"}, status=500)
 
 
+def get_base_url(url):
+    parsed_url = urlparse(url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
+    return base_url
+
+
 @api_view(['GET', 'PUT'])
 @permission_classes([])
 def update_contract_worker(request, worker_id):
@@ -664,6 +674,14 @@ def update_contract_worker(request, worker_id):
             })
 
         elif request.method == 'PUT':
+
+            # Access deleted images sent with FormData
+
+            deleted_images = request.FILES.getlist('deleted_images')
+
+            # Access image objects sent as part of deleted_images
+            deleted_image_paths = request.data.getlist('deleted_images')
+            print('deleted_image_paths from req', deleted_image_paths)
             data = request.data.copy()
 
             # Convert agency data to an instance of the Agency model
@@ -723,6 +741,7 @@ def update_contract_worker(request, worker_id):
 
             # Handle user images
             user_images = request.FILES.getlist('user_images')
+            print('Number of user images received', user_images)
 
             for idx, file in enumerate(user_images):
                 if file.name == "captured_photo.jpg":
@@ -730,27 +749,53 @@ def update_contract_worker(request, worker_id):
                     file_extension = os.path.splitext(file.name)[1]
                     unique_filename = f"captured_photo_{timestamp}{file_extension}"
                     user_images[idx].name = unique_filename
-            
+
             # Get deleted images IDs from the frontend
-            deleted_image_ids = json.loads(data.get('deleted_images', '[]'))
+            # deleted_image_ids = json.loads(data.get('deleted_images', '[]'))
 
-            # Iterate over each deleted image ID
-            for image_id in deleted_image_ids:
-                try:
-                    # Try to retrieve the UserDocument object with the given ID
-                    image_to_delete = UserDocument.objects.get(pk=image_id)
-                    # Delete the image if it exists
-                    if worker.user_image == image_to_delete.document:
-                        worker.user_image = None
-                        worker.save()
+            # # Iterate over each deleted image ID
+            # for image_id in deleted_image_ids:
+            #     try:
+            #         # Try to retrieve the UserDocument object with the given ID
+            #         image_to_delete = UserDocument.objects.get(pk=image_id)
+            #         # Delete the image if it exists
+            #         if worker.user_image == image_to_delete.document:
+            #             worker.user_image = None
+            #             worker.save()
 
-                    image_to_delete.delete()
-                    print(f"Deleted image with ID {image_id}")
-                except UserDocument.DoesNotExist:
-                    # Handle the case where the image with the given ID doesn't exist
-                    print(f"Image with ID {image_id} does not exist")
+            #         image_to_delete.delete()
+            #         print(f"Deleted image with ID {image_id}")
+            #     except UserDocument.DoesNotExist:
+            #         # Handle the case where the image with the given ID doesn't exist
+            #         print(f"Image with ID {image_id} does not exist")
 
             # Update existing user documents and create new ones if needed
+
+            if deleted_image_paths and len(deleted_image_paths) > 0:
+                print('inside delete iamges apth')
+                for path in deleted_image_paths:
+                    try:
+                        # Assuming 'document' is a property of the worker object
+                        print('tis is worker', worker)
+                        print('worker.user_image = ', worker.user_image)
+                        path_url = urlparse(path).path
+                        # Remove leading slash from path_url
+                        if path_url.startswith('/'):
+                            path_url = path_url[1:]
+                        print('Path URL:', path_url)
+
+                        if worker.user_image == path_url:
+                            worker.user_image = None
+                            worker.save()
+                        # Process other operations related to the path as needed
+                        UserDocument.objects.get(document=path_url).delete()
+
+                        # user_document = UserDocument.objects.get(
+                        #     Q(document__icontains=path_url))
+                        # print('user_document', user_document)
+                    except ObjectDoesNotExist:
+                        print(f"Object with path {path_url} does not exist")
+
             for image_id in user_images:
                 # Check if the image already exists in UserDocument model
                 existing_document = UserDocument.objects.filter(
