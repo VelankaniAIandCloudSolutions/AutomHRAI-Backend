@@ -1371,8 +1371,6 @@ def create_check_in_out(request):
 
             check_in_out = CheckInAndOut.objects.create(
                 user=user, type=type, location=location)
-            check_in_out = CheckInAndOut.objects.create(
-                user=user, type=type)
 
             file = request.data.get('image')
             file_content = file.read()
