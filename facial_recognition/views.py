@@ -42,7 +42,7 @@ import base64
 import os
 from .tasks import *
 from django.core.cache import cache
-from automhrai.utils import upload_file_to_s3
+from automhrai.utils import upload_file_to_s3, upload_file_to_s3_2
 from django.conf import settings
 import calendar
 from django.db.models import Count
@@ -1352,32 +1352,46 @@ def parse_excel_contract_workers_creation(request):
     else:
         return Response({'error': 'Invalid request method or file not provided.'}, status=400)
 
-
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
 def create_check_in_out(request):
     if request.method == 'POST':
         try:
-            user_email = request.data.get('email')
-            user = UserAccount.objects.get(email=user_email)
-            image_file = request.FILES.get('image')
+            user = UserAccount.objects.get(email=request.data['email'])
+            location = Location.objects.get(id=request.data['location_id'])
             today = timezone.now().date()
-            check_in_exists = CheckInAndOut.objects.filter(user=user, created_at__date=today).exists()
-            
-            if check_in_exists:
+
+            latest_check_in_out = CheckInAndOut.objects.filter(user=user, location=location).order_by('-created_at').first()
+
+            if latest_check_in_out and latest_check_in_out.type == 'checkin':
                 type = 'checkout'
             else:
                 type = 'checkin'
-            
+
             check_in_out = CheckInAndOut.objects.create(
-                user=user, type=type)
-            if image_file:
-                check_in_out.image.save(image_file.name, ContentFile(image_file.read()), save=True)
-            
-            serializer = CheckInAndOutSerializer(check_in_out)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                user=user, type=type, location=location)
+
+            file = request.data.get('image')
+            file_content = file.read()
+            file_name = file.name
+
+            try:
+                image_url = upload_file_to_s3_2(file_content, file_name, settings.AWS_STORAGE_BUCKET_NAME)
+                if not image_url:
+                    return Response({'error': 'Failed to upload image to S3'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                check_in_out.image = image_url
+                check_in_out.save()
+                serializer = CheckInAndOutSerializer(check_in_out)
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                print("Exception occurred during file upload:", e)
+                return Response({'error': 'Failed to upload image to S3'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         except UserAccount.DoesNotExist:
-            return Response({'error': 'User not found'}, status=404)
+            return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'error': str(e)}, status=500)
+            print("Exception occurred:", e)
+            return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
