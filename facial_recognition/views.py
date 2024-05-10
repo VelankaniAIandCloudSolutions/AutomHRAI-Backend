@@ -692,7 +692,7 @@ def get_contract_worker_attendance(request):
         user_entries = list(user_check_ins) + list(user_break_ins)
 
         all_entries.extend(user_entries)
-        
+
     all_entries.sort(key=lambda entry: entry.created_at, reverse=True)
     entry_serializer = CheckBreakSerializer(all_entries, many=True)
     projects = Project.objects.all()
@@ -1175,9 +1175,13 @@ def calculate_monthly_contract_worker_timesheet_report(request):
             agency_name = worker.agency.name if worker.agency else None
             subcategory_name = worker.sub_category.name if worker.sub_category else None
 
+            full_name = worker.first_name
+            if worker.last_name:
+                full_name += " " + worker.last_name
+
             # Create dictionary for the contract worker
             contract_worker_data = {
-                "contract_worker_name": f"{worker.first_name} {worker.last_name}",
+                "contract_worker_name": full_name,
                 "agency": agency_name,
                 "subcategory": subcategory_name
             }
