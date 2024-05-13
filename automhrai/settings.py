@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_results',
     'storages',
+    'channels',
+    'channels_redis'
     
 ]
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
@@ -211,3 +213,12 @@ CACHES = {
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],  
+        },
+    },
+}

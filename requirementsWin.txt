@@ -110,3 +110,5 @@ gunicorn
 #boto3
 #django-storages
 #python-dotenv
+#channels 
+#channels redis
