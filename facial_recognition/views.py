@@ -47,6 +47,8 @@ from django.conf import settings
 import calendar
 from django.db.models import Count
 import datetime
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 @api_view(['POST'])
@@ -1362,7 +1364,7 @@ def create_check_in_out(request):
             location = Location.objects.get(id=request.data['location_id'])
             today = timezone.now().date()
 
-            latest_check_in_out = CheckInAndOut.objects.filter(user=user, location=location).order_by('-created_at').first()
+            latest_check_in_out = CheckInAndOut.objects.filter(user=user, location=location,created_at__date=today,).order_by('-created_at').first()
 
             if latest_check_in_out and latest_check_in_out.type == 'checkin':
                 type = 'checkout'
@@ -1383,7 +1385,17 @@ def create_check_in_out(request):
 
                 check_in_out.image = image_url
                 check_in_out.save()
+
                 serializer = CheckInAndOutSerializer(check_in_out)
+
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    'check_in_out_create_group', 
+                    {
+                        'type': 'send_check_in_out_data',
+                        'check_in_out_data': serializer.data,
+                    }
+                )
 
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except Exception as e:
@@ -1392,6 +1404,8 @@ def create_check_in_out(request):
 
         except UserAccount.DoesNotExist:
             return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
+        except Location.DoesNotExist:
+            return Response({'error': 'Location does not exist'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             print("Exception occurred:", e)
             return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
