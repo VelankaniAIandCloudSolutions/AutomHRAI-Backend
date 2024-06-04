@@ -8,6 +8,7 @@ from django.shortcuts import render
 # Create your views here.
 from datetime import date, datetime
 
+import requests
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -637,6 +638,28 @@ def get_and_create_contract_worker(request):
             else:
                 # No files uploaded, handle accordingly
                 print('No user images received')
+
+            # Prepare the files to be uploaded
+            image_urls_s3 = [
+                document.document.url for document in user_account.user_documents.all()]
+            files = [('images', image) for image in user_images]
+            image_urls_s3_string = ','.join(image_urls_s3)
+            # print('User data/form_data being sent to Flask API:', user_data)
+            # for file in files:
+            #     print(
+            #         f'File being sent: {file[1].name}, size: {file[1].size} bytes')
+            user_data = {
+                'user_id': user_account.pk,
+                'name': user_account.get_full_name(),
+                'email': user_account.email,
+                'image_urls_s3': image_urls_s3_string
+            }
+            response = requests.post(
+                'http://localhost:5000/api/v1/create-contract-worker', data=user_data,)
+            if response.status_code == 200:
+                print("Image and folders upload successful!")
+            else:
+                print("Error uploading images and creating folder:", response.text)
 
             # Return a proper response with a status code
             return Response({"message": "UserAccount created successfully"}, status=201)
