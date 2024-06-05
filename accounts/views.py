@@ -672,8 +672,7 @@ def get_and_create_contract_worker(request):
                 'email': user_account.email,
                 'image_urls_s3': image_urls_s3_string
             }
-            response = requests.post(
-                'http://localhost:5000/api/v1/create-contract-worker', data=user_data,)
+            response = requests.post(settings.FACIAL_RECOGNITION_SERVER_HOST +  'api/v1/create-contract-worker', data=user_data,)
             if response.status_code == 200:
                 print("Image and folders upload successful!")
             else:
