@@ -97,5 +97,40 @@ def create_contract_worker():
     return jsonify({'success': 'Images downloaded and saved successfully'}), 200
 
 
+@app.route('/api/v1/update-contract-worker', methods=['POST'])
+def update_contract_worker_images():
+    user_id = request.form.get('user_id')
+    name = request.form.get('name')
+    email = request.form.get('email')
+    image_urls_s3_string = request.form.get('image_urls_s3', '')
+    # Split the string into a list of URLs
+    image_urls_s3 = image_urls_s3_string.split(
+        ',') if image_urls_s3_string else []
+    # Split string into list
+
+    # Create user folder
+    user_folder = create_user_folder(name, email, user_id)
+
+    # Clear existing images in the folder
+    for filename in os.listdir(user_folder):
+        file_path = os.path.join(user_folder, filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+
+    # Download new images from S3
+    image_urls_s3_string = request.form.get('image_urls_s3', '')
+    image_urls_s3 = image_urls_s3_string.split(
+        ',') if image_urls_s3_string else []
+
+    for image_url in image_urls_s3:
+        parsed_url = urlparse(image_url)
+        image_key = parsed_url.path.lstrip('/')
+        image_filename = os.path.basename(image_key)
+        image_path = os.path.join(user_folder, image_filename)
+        s3.download_file(aws_bucket_name, image_key, image_path)
+
+    return jsonify({'success': 'Images updated successfully'}), 200
+
+
 if __name__ == '__main__':
     app.run(debug=True)

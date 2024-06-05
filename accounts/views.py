@@ -830,6 +830,29 @@ def update_contract_worker(request, worker_id):
 
             worker.user_image = user_images[0] if user_images else None
             worker.save()
+
+            # Send a request to the Flask API to update images
+            image_urls_s3 = [
+                document.document.url for document in UserDocument.objects.filter(user=worker)]
+            image_urls_s3_string = ','.join(image_urls_s3)
+
+            # Send a request to the Flask API to update images
+            user_data = {
+                'user_id': worker.pk,
+                'name': worker.get_full_name(),
+                'email': worker.email,
+                'image_urls_s3': image_urls_s3_string
+            }
+            response = requests.post(
+                'http://localhost:5000/api/v1/update-contract-worker', data=user_data,)
+            if response.status_code == 200:
+                print("Image inside folders updated successful!")
+            else:
+                print("Error uploading images and creating folder:", response.text)
+
+            # Return a proper response with a status code
+            return Response({"message": "UserAccount created successfully"}, status=201)
+
             return JsonResponse({"message": "Contract worker updated successfully"})
 
     except Exception as e:
