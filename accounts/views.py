@@ -528,6 +528,24 @@ def get_and_delete_contract_workers(request, contract_worker_id=None):
                 contract_worker = UserAccount.objects.get(
                     id=contract_worker_id, is_contract_worker=True)
                 contract_worker.delete()
+                # Define the full URL of the API endpoint
+                user_data = {
+                    'name': contract_worker.get_full_name(),
+                    'email': contract_worker.email,
+                }
+
+                delete_url = f'http://localhost:5000/api/v1/delete-contract-worker/{contract_worker_id}'
+
+                # Make a DELETE request to delete the contract worker
+                response = requests.delete(delete_url, data=user_data)
+
+                # Check the response status code
+                if response.status_code == 204:
+                    print('Contract worker  folder deleted from s3 successfully')
+                elif response.status_code == 404:
+                    print('Error removing contract worker folder from s3,',
+                          response.content.decode())
+
                 return Response({"message": "Contract worker deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({"error": "Contract worker ID not provided"}, status=status.HTTP_400_BAD_REQUEST)

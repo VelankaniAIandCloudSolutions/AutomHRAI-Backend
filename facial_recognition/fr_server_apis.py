@@ -24,6 +24,15 @@ def create_user_folder(name, email, user_id):
     return folder_path
 
 
+def delete_user_folder(folder_path):
+    if os.path.exists(folder_path):
+        for filename in os.listdir(folder_path):
+            file_path = os.path.join(folder_path, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        os.rmdir(folder_path)
+
+
 # Retrieve AWS credentials from environment variables
 aws_access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
 aws_secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
@@ -37,34 +46,6 @@ if not aws_access_key_id or not aws_secret_access_key:
 s3 = boto3.client('s3', aws_access_key_id=aws_access_key_id,
                   aws_secret_access_key=aws_secret_access_key)
 
-
-# @app.route('/api/v1/create-contract-worker', methods=['POST'])
-# def create_contract_worker():
-#     user_id = request.form.get('user_id')
-#     print('user_id', user_id)
-#     name = request.form.get('name')
-#     print('name', name)
-#     email = request.form.get('email')
-#     print('email', email)
-#     images = request.files.getlist('images')
-#     print('images', images)
-
-#     for image in images:
-#         print(f'Image filename: {image.filename}')
-#         print(f'Image content type: {image.content_type}')
-#         print(f'Image size: {image.content_length}')
-
-#     if not all([user_id, name, email, images]):
-#         return jsonify({'error': 'Missing required parameters'}), 400
-
-#     user_folder = create_user_folder(name, email, user_id)
-
-#     for image in images:
-#         if image.filename != '':
-#             image_path = os.path.join(user_folder, image.filename)
-#             image.save(image_path)
-
-#     return jsonify({'message': 'Images uploaded successfully'}), 200
 
 @app.route('/api/v1/create-contract-worker', methods=['POST'])
 def create_contract_worker():
@@ -130,6 +111,28 @@ def update_contract_worker_images():
         s3.download_file(aws_bucket_name, image_key, image_path)
 
     return jsonify({'success': 'Images updated successfully'}), 200
+
+
+@app.route('/api/v1/delete-contract-worker/<int:user_id>', methods=['DELETE'])
+def delete_contract_worker(user_id):
+    try:
+        # Assuming you have a method to delete the contract worker from the database
+        # delete_contract_worker_from_database(user_id)
+        print(user_id)
+
+        # Deleting the associated folder
+        name = request.form.get('name')
+        email = request.form.get('email')
+        user_folder = os.path.join(
+            app.config['UPLOAD_FOLDER'], f"{name}-{email}-{user_id}")
+
+        print(user_folder)
+        delete_user_folder(user_folder)
+
+        return jsonify({'success': 'Contract worker folder deleted successfully'}), 200
+    except Exception as e:
+        error_message = str(e)
+        return jsonify({'error': f'Failed to delete contract worker folder: {error_message}'}), 500
 
 
 if __name__ == '__main__':
