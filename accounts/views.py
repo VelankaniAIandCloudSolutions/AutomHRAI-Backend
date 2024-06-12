@@ -1107,9 +1107,7 @@ def upload_face_recognition_data(request):
 def create_contract_workers_entries_from_excel(request):
     try:
         excel_file_path = './media/Contract_workers_format.xlsx'
-
         df = pd.read_excel(excel_file_path, sheet_name='Sheet1', header=0)
-
         for index, row in df.iterrows():
             # Split first name and last name
             name_parts = row['First Name'].split(maxsplit=1)
