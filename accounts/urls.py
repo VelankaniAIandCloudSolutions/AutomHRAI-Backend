@@ -49,6 +49,8 @@ urlpatterns = [
     path('contract-workers/update/<int:worker_id>/',
          update_contract_worker, name='update_contract_worker'),
     path('upload_face_recognition_data/', views.upload_face_recognition_data),
+    path('create-contract-workers-entries-from-excel',
+         views.create_contract_workers_entries_from_excel)
     # path('import-entities-from-automhr/', import_entities_from_automhr,name='import_entities_from_automhr'),
     # path('import-departments-from-automhr/', import_departments_from_automhr,name='import_departments_from_automhr'),
     # path('import-jobs-from-automhr/', import_jobs_from_automhr,name='import_jobs_from_automhr'),

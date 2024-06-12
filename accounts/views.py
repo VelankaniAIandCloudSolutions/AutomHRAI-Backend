@@ -1,4 +1,5 @@
 import random
+import time
 import pandas as pd
 import json
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -672,7 +673,8 @@ def get_and_create_contract_worker(request):
                 'email': user_account.email,
                 'image_urls_s3': image_urls_s3_string
             }
-            response = requests.post(settings.FACIAL_RECOGNITION_SERVER_HOST +  'api/v1/create-contract-worker', data=user_data,)
+            response = requests.post(
+                settings.FACIAL_RECOGNITION_SERVER_HOST + 'api/v1/create-contract-worker', data=user_data,)
             if response.status_code == 200:
                 print("Image and folders upload successful!")
             else:
@@ -1098,3 +1100,48 @@ def upload_face_recognition_data(request):
             name=project_name, location=location, category=category)
 
     return Response("Data uploaded successfully.")
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_contract_workers_entries_from_excel(request):
+    try:
+        excel_file_path = './media/Contract_workers_format.xlsx'
+
+        df = pd.read_excel(excel_file_path, sheet_name='Sheet1', header=0)
+
+        for index, row in df.iterrows():
+            # Split first name and last name
+            name_parts = row['First Name'].split(maxsplit=1)
+            first_name = name_parts[0]
+            last_name = name_parts[1] if len(name_parts) > 1 else None
+
+            # Get or create related entries
+            agency, _ = Agency.objects.update_or_create(
+                name=row['Agency Name'])
+            sub_category, _ = SubCategory.objects.update_or_create(
+                name=row['Subcategory'])
+            location, _ = Location.objects.update_or_create(name=row['Area'])
+
+            # Create or update the user
+            user_data = {
+                'phone_number': row['Mobile Number (Optional)'] if row['Mobile Number (Optional)'] != 'NA' and not pd.isna(row['Mobile Number (Optional)']) else None,
+                'agency': agency,
+                'sub_category': sub_category,
+                'location': location,
+                'emp_id': row['Worker ID(optional)'] if row['Worker ID(optional)'] != 'NA' else None,
+                'is_contract_worker': True,
+                'first_name': first_name,
+                'last_name': last_name,
+            }
+
+            # Generate email using first name and emp_id
+            email = f"{first_name.lower()}{row['Worker ID(optional)']}@automhr.com"
+
+            UserAccount.objects.update_or_create(
+                email=email,
+                defaults=user_data)
+
+        return Response({"status": "success"}, status=200)
+    except Exception as e:
+        return Response({"status": "error", "message": str(e)}, status=500)

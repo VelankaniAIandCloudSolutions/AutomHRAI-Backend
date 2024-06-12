@@ -174,16 +174,38 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    # def save(self, *args, **kwargs):
+    #     try:
+    #         if not self.pk:
+    #             super().save(*args, **kwargs)  # Save the object to assign the primary key
+    #             # Assign emp_id based on the auto-generated primary key
+
+    #             if self.is_contract_worker:
+    #                 self.emp_id = f"CW-{self.pk:06}"
+    #                 self.save()  # Save again to update agency_id
+    #         else:
+    #             super().save(*args, **kwargs)
+    #     except Exception as e:
+    #         # Handle the exception here
+    #         print(f"Error occurred while saving: {e}")
+
     def save(self, *args, **kwargs):
         try:
-            if not self.pk:
-                super().save(*args, **kwargs)  # Save the object to assign the primary key
-                # Assign emp_id based on the auto-generated primary key
-
-                if self.is_contract_worker:
-                    self.emp_id = f"CW-{self.pk:06}"
-                    self.save()  # Save again to update agency_id
+            if not self.emp_id:
+                # If emp_id is not provided, generate it based on the auto-generated primary key
+                if not self.pk:
+                    super().save(*args, **kwargs)  # Save the object to assign the primary key
+                    # Assign emp_id based on the auto-generated primary key
+                    if self.is_contract_worker:
+                        self.emp_id = f"CW-{self.pk:06}"
+                        super().save(*args, **kwargs)  # Save again to update emp_id
+                else:
+                    # Primary key is already generated
+                    if self.is_contract_worker:
+                        self.emp_id = f"CW-{self.pk:06}"
+                        super().save(*args, **kwargs)  # Save again to update emp_id
             else:
+                # If emp_id is provided (through Excel or otherwise), use the provided one
                 super().save(*args, **kwargs)
         except Exception as e:
             # Handle the exception here
