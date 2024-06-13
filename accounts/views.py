@@ -535,7 +535,7 @@ def get_and_delete_contract_workers(request, contract_worker_id=None):
                     'email': contract_worker.email,
                 }
 
-                delete_url = f'http://localhost:5000/api/v1/delete-contract-worker/{contract_worker_id}'
+                delete_url =  f'{settings.FACIAL_RECOGNITION_SERVER_HOST}api/v1/delete-contract-worker/{contract_worker_id}'
 
                 # Make a DELETE request to delete the contract worker
                 response = requests.delete(delete_url, data=user_data)
@@ -863,7 +863,7 @@ def update_contract_worker(request, worker_id):
                 'image_urls_s3': image_urls_s3_string
             }
             response = requests.post(
-                'http://localhost:5000/api/v1/update-contract-worker', data=user_data,)
+                settings.FACIAL_RECOGNITION_SERVER_HOST + 'api/v1/update-contract-worker', data=user_data,)
             if response.status_code == 200:
                 print("Image inside folders updated successful!")
             else:
