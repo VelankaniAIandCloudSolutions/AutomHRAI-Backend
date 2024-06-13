@@ -903,7 +903,7 @@ def get_contract_worker_timesheet(request):
                 return Response({'error': 'No checkin entries found'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not end_date:
-            end_date = datetime.now().date()
+            end_date = datetime.datetime.now().date()
 
         date_array = generate_date_array(start_date, end_date)
 
