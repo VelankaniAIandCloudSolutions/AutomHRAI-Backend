@@ -1,3 +1,4 @@
+from itertools import zip_longest
 import random
 from django.db.models import Q
 from collections import defaultdict
@@ -430,7 +431,8 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']
+        : entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -1354,6 +1356,7 @@ def parse_excel_contract_workers_creation(request):
     else:
         return Response({'error': 'Invalid request method or file not provided.'}, status=400)
 
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
@@ -1364,7 +1367,8 @@ def create_check_in_out(request):
             location = Location.objects.get(id=request.data['location_id'])
             today = timezone.now().date()
 
-            latest_check_in_out = CheckInAndOut.objects.filter(user=user, location=location,created_at__date=today,).order_by('-created_at').first()
+            latest_check_in_out = CheckInAndOut.objects.filter(
+                user=user, location=location, created_at__date=today,).order_by('-created_at').first()
 
             if latest_check_in_out and latest_check_in_out.type == 'checkin':
                 type = 'checkout'
@@ -1379,7 +1383,8 @@ def create_check_in_out(request):
             file_name = file.name
 
             try:
-                image_url = upload_file_to_s3_2(file_content, file_name, settings.AWS_STORAGE_BUCKET_NAME)
+                image_url = upload_file_to_s3_2(
+                    file_content, file_name, settings.AWS_STORAGE_BUCKET_NAME)
                 if not image_url:
                     return Response({'error': 'Failed to upload image to S3'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -1390,7 +1395,7 @@ def create_check_in_out(request):
 
                 channel_layer = get_channel_layer()
                 async_to_sync(channel_layer.group_send)(
-                    'check_in_out_create_group', 
+                    'check_in_out_create_group',
                     {
                         'type': 'send_check_in_out_data',
                         'check_in_out_data': serializer.data,
@@ -1409,3 +1414,233 @@ def create_check_in_out(request):
         except Exception as e:
             print("Exception occurred:", e)
             return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([])
+def calculate_daily_contract_worker_timesheet(request):
+    try:
+        # Extract formData from request
+        agency_id = request.data.get("agency")
+        from_date_str = request.data.get("from_date")
+        to_date_str = request.data.get("to_date")
+        worker_ids = request.data.get("workers")
+
+        # Validate date inputs
+        try:
+            from_date = datetime.datetime.strptime(
+                from_date_str, "%Y-%m-%d").date()
+            to_date = datetime.datetime.strptime(
+                to_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+        if from_date > to_date:
+            return Response({"error": "Invalid date range. 'From' date should be before 'To' date."}, status=400)
+
+        # Get workers based on the provided IDs and conditions
+        if worker_ids == ["All_Workers"]:
+            # Fetch all workers
+            workers = UserAccount.objects.filter(is_contract_worker=True)
+        else:
+            # Fetch workers based on the provided IDs and conditions
+            if agency_id and worker_ids:
+                workers = UserAccount.objects.filter(
+                    id__in=worker_ids, agency_id=agency_id, is_contract_worker=True)
+            elif agency_id:
+                workers = UserAccount.objects.filter(
+                    agency_id=agency_id, is_contract_worker=True)
+            elif worker_ids:
+                workers = UserAccount.objects.filter(
+                    id__in=worker_ids, is_contract_worker=True)
+            else:
+                workers = UserAccount.objects.filter(
+                    is_contract_worker=True)
+
+        # List to store timesheet data for each contract worker
+        timesheet_data = []
+
+        # Iterate through each worker
+        for worker in workers:
+            # Fetch agency and subcategory details for the current worker
+            agency_name = worker.agency.name if worker.agency else None
+            subcategory_name = worker.sub_category.name if worker.sub_category else None
+
+            full_name = worker.first_name
+            if worker.last_name:
+                full_name += " " + worker.last_name
+
+            # Create dictionary for the contract worker
+            contract_worker_data = {
+                "contract_worker_name": full_name,
+                "agency": agency_name,
+                "subcategory": subcategory_name
+            }
+
+            # Dictionary to store daily timesheet data
+            daily_timesheet_data = {}
+
+            # Iterate through each day within the date range
+            current_date = from_date
+            while current_date <= to_date:
+                try:
+                    # # Get check-ins, check-outs, break-ins, and break-outs for the current day until 6 PM
+                    whole_day_check_ins = CheckInAndOut.objects.filter(
+                        user=worker, type='checkin', created_at__date=current_date)
+                    whole_day_check_outs = CheckInAndOut.objects.filter(
+                        user=worker, type='checkout', created_at__date=current_date)
+                    whole_day_break_ins = BreakInAndOut.objects.filter(
+                        user=worker, type='breakin', created_at__date=current_date)
+                    whole_day_break_outs = BreakInAndOut.objects.filter(
+                        user=worker, type='breakout', created_at__date=current_date)
+
+                    effective_working_time_whole_day = calculate_effective_working_time_new(
+                        whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs)
+
+                    print('effective_working_time_whole_day',
+                          effective_working_time_whole_day)
+
+                    # check_ins = CheckInAndOut.objects.filter(
+                    #     user=worker, type='checkin', created_at__date=current_date, created_at__time__lt=datetime.time(18, 0))
+                    # check_outs = CheckInAndOut.objects.filter(
+                    #     user=worker, type='checkout', created_at__date=current_date, created_at__time__lt=datetime.time(18, 0))
+                    # break_ins = BreakInAndOut.objects.filter(
+                    #     user=worker, type='breakin', created_at__date=current_date, created_at__time__lt=datetime.time(18, 0))
+                    # break_outs = BreakInAndOut.objects.filter(
+                    #     user=worker, type='breakout', created_at__date=current_date, created_at__time__lt=datetime.time(18, 0))
+
+                    # # Calculate total effective working time until 6 PM for the current day
+                    # effective_working_time = calculate_effective_working_time_new(
+                    #     check_ins, check_outs, break_ins, break_outs)
+
+                    # Filter check-ins, check-outs, break-ins, and break-outs after 6 PM
+                    check_ins_after_6 = CheckInAndOut.objects.filter(
+                        user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                    check_outs_after_6 = CheckInAndOut.objects.filter(
+                        user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                    break_ins_after_6 = BreakInAndOut.objects.filter(
+                        user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                    break_outs_after_6 = BreakInAndOut.objects.filter(
+                        user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+
+                    # Combine and sort events after 6 PM
+                    events_after_6 = list(check_ins_after_6) + list(check_outs_after_6) + list(
+                        break_ins_after_6) + list(break_outs_after_6)
+                    events_after_6.sort(key=lambda event: event.created_at)
+
+                    # Calculate effective working time after 6 PM
+                    extra_working_time = calculate_extra_shift_time(
+                        events_after_6)
+
+                    print('extra_working_time', extra_working_time)
+
+                    # Determine status (Present or Absent) for the whole day
+                    status = "Present" if whole_day_check_ins.exists(
+                    ) or check_ins_after_6.exists() else "Absent"
+
+                    # Store daily timesheet data
+                    daily_timesheet_data[current_date.strftime("%Y-%m-%d")] = {
+                        "status": status,
+                        "effective_working_time_till_6pm": effective_working_time_whole_day,
+                        "extra_working_time_after_6pm": extra_working_time
+                    }
+                except ValueError:  # Handle if there are no check-ins or check-outs
+                    pass
+
+                # Move to the next day
+                current_date += timedelta(days=1)
+
+            # Add daily timesheet data to contract worker data
+            contract_worker_data.update(daily_timesheet_data)
+
+            # Append contract worker data to timesheet_data list
+            timesheet_data.append(contract_worker_data)
+
+        return Response(timesheet_data)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+
+def calculate_effective_working_time_new(check_ins, check_outs, break_ins, break_outs):
+    try:
+        # Calculate effective working time until 6 PM for a single day
+        total_working_time = timedelta(seconds=0)
+        breaks_time = timedelta(seconds=0)
+
+        check_in_out_pairs = list(zip(check_ins, check_outs))
+
+        break_in_out_pairs = list(zip(break_ins, break_outs))
+
+        for check_in, check_out in check_in_out_pairs:
+            if check_in.created_at < check_out.created_at:
+                total_working_time += (check_out.created_at -
+                                       check_in.created_at)
+
+        for break_in, break_out in break_in_out_pairs:
+            if break_in.created_at < break_out.created_at:
+                breaks_time += (break_out.created_at - break_in.created_at)
+
+        effective_working_time = total_working_time - breaks_time
+        return effective_working_time.total_seconds()
+    except Exception as e:
+        return 0
+
+
+def calculate_extra_shift_time(events_after_6):
+    try:
+        # Calculate extra working time after 6 PM for a single day
+
+        print('events_after_6', events_after_6)
+        total_working_time = timedelta(seconds=0)
+        breaks_time = timedelta(seconds=0)
+
+        if not events_after_6:
+            return 0
+
+        first_event = events_after_6[0]
+        print('first_event', first_event)
+        print(first_event.type)
+        print(first_event.created_at.time())
+        first_event.refresh_from_db()
+
+        # If the first event is a checkout after 6 PM, calculate the time from 6 PM to this checkout
+        if first_event.type == 'checkout' and first_event.created_at.time() >= datetime.time(18, 0):
+            print('inside if')
+            total_working_time += (first_event.created_at - datetime.datetime.combine(
+                first_event.created_at.date(), datetime.time(18, 0)))
+            # Remove the first checkout event
+            print('total_working_time inside if', total_working_time)
+            events_after_6 = events_after_6[1:]
+
+        else:
+            # Handle the case where the first event is not a checkout after 6 PM
+            # Optionally, you can manipulate events_after_6 here
+            events_after_6 = events_after_6
+
+        # Calculate working time for remaining pairs of events
+        check_in_out_pairs = []
+        break_in_out_pairs = []
+
+        # Using zip to iterate over pairs of events
+        for current_event, next_event in zip(events_after_6, events_after_6[1:]):
+            if current_event.type == 'checkin' and next_event.type == 'checkout':
+                check_in_out_pairs.append((current_event, next_event))
+            elif current_event.type == 'breakin' and next_event.type == 'breakout':
+                break_in_out_pairs.append((current_event, next_event))
+
+        for check_in, check_out in check_in_out_pairs:
+            if check_in.created_at < check_out.created_at:
+                total_working_time += (check_out.created_at -
+                                       check_in.created_at)
+
+        for break_in, break_out in break_in_out_pairs:
+            if break_in.created_at < break_out.created_at:
+                breaks_time += (break_out.created_at - break_in.created_at)
+
+        extra_working_time = total_working_time - breaks_time
+        return extra_working_time.total_seconds()
+
+    except Exception as e:
+        return 0

@@ -28,6 +28,8 @@ urlpatterns = [
     path('parse_excel_for_contract_workers_creation/',
          views.parse_excel_contract_workers_creation),
     path('create-check-in-out/',
-         views.create_check_in_out)
+         views.create_check_in_out),
+    path('calculate-daily-contract-worker-timesheet/',
+         views.calculate_daily_contract_worker_timesheet)
 
 ]
