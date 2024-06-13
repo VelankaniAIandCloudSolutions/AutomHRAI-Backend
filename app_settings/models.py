@@ -23,6 +23,7 @@ class Company(models.Model):
     name = models.CharField(max_length=255)
     ref_id = models.IntegerField(null=True, blank=True)
     customer = models.ForeignKey(Customer,related_name='companies', on_delete=models.CASCADE)
+    cut_off_time = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):

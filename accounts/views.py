@@ -1,4 +1,5 @@
 import random
+import time
 import pandas as pd
 import json
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -8,6 +9,7 @@ from django.shortcuts import render
 # Create your views here.
 from datetime import date, datetime
 
+import requests
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -527,6 +529,24 @@ def get_and_delete_contract_workers(request, contract_worker_id=None):
                 contract_worker = UserAccount.objects.get(
                     id=contract_worker_id, is_contract_worker=True)
                 contract_worker.delete()
+                # Define the full URL of the API endpoint
+                user_data = {
+                    'name': contract_worker.get_full_name(),
+                    'email': contract_worker.email,
+                }
+
+                delete_url =  f'{settings.FACIAL_RECOGNITION_SERVER_HOST}api/v1/delete-contract-worker/{contract_worker_id}'
+
+                # Make a DELETE request to delete the contract worker
+                response = requests.delete(delete_url, data=user_data)
+
+                # Check the response status code
+                if response.status_code == 204:
+                    print('Contract worker  folder deleted from s3 successfully')
+                elif response.status_code == 404:
+                    print('Error removing contract worker folder from s3,',
+                          response.content.decode())
+
                 return Response({"message": "Contract worker deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({"error": "Contract worker ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
@@ -637,6 +657,28 @@ def get_and_create_contract_worker(request):
             else:
                 # No files uploaded, handle accordingly
                 print('No user images received')
+
+            # Prepare the files to be uploaded
+            image_urls_s3 = [
+                document.document.url for document in user_account.user_documents.all()]
+            files = [('images', image) for image in user_images]
+            image_urls_s3_string = ','.join(image_urls_s3)
+            # print('User data/form_data being sent to Flask API:', user_data)
+            # for file in files:
+            #     print(
+            #         f'File being sent: {file[1].name}, size: {file[1].size} bytes')
+            user_data = {
+                'user_id': user_account.pk,
+                'name': user_account.get_full_name(),
+                'email': user_account.email,
+                'image_urls_s3': image_urls_s3_string
+            }
+            response = requests.post(
+                settings.FACIAL_RECOGNITION_SERVER_HOST + 'api/v1/create-contract-worker', data=user_data,)
+            if response.status_code == 200:
+                print("Image and folders upload successful!")
+            else:
+                print("Error uploading images and creating folder:", response.text)
 
             # Return a proper response with a status code
             return Response({"message": "UserAccount created successfully"}, status=201)
@@ -807,6 +849,29 @@ def update_contract_worker(request, worker_id):
 
             worker.user_image = user_images[0] if user_images else None
             worker.save()
+
+            # Send a request to the Flask API to update images
+            image_urls_s3 = [
+                document.document.url for document in UserDocument.objects.filter(user=worker)]
+            image_urls_s3_string = ','.join(image_urls_s3)
+
+            # Send a request to the Flask API to update images
+            user_data = {
+                'user_id': worker.pk,
+                'name': worker.get_full_name(),
+                'email': worker.email,
+                'image_urls_s3': image_urls_s3_string
+            }
+            response = requests.post(
+                settings.FACIAL_RECOGNITION_SERVER_HOST + 'api/v1/update-contract-worker', data=user_data,)
+            if response.status_code == 200:
+                print("Image inside folders updated successful!")
+            else:
+                print("Error uploading images and creating folder:", response.text)
+
+            # Return a proper response with a status code
+            return Response({"message": "UserAccount created successfully"}, status=201)
+
             return JsonResponse({"message": "Contract worker updated successfully"})
 
     except Exception as e:
@@ -1035,3 +1100,46 @@ def upload_face_recognition_data(request):
             name=project_name, location=location, category=category)
 
     return Response("Data uploaded successfully.")
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_contract_workers_entries_from_excel(request):
+    try:
+        excel_file_path = './media/Contract_workers_format.xlsx'
+        df = pd.read_excel(excel_file_path, sheet_name='Sheet1', header=0)
+        for index, row in df.iterrows():
+            # Split first name and last name
+            name_parts = row['First Name'].split(maxsplit=1)
+            first_name = name_parts[0]
+            last_name = name_parts[1] if len(name_parts) > 1 else None
+
+            # Get or create related entries
+            agency, _ = Agency.objects.update_or_create(
+                name=row['Agency Name'])
+            sub_category, _ = SubCategory.objects.update_or_create(
+                name=row['Subcategory'])
+            location, _ = Location.objects.update_or_create(name=row['Area'])
+
+            # Create or update the user
+            user_data = {
+                'phone_number': row['Mobile Number (Optional)'] if row['Mobile Number (Optional)'] != 'NA' and not pd.isna(row['Mobile Number (Optional)']) else None,
+                'agency': agency,
+                'sub_category': sub_category,
+                'location': location,
+                'emp_id': row['Worker ID(optional)'] if row['Worker ID(optional)'] != 'NA' else None,
+                'is_contract_worker': True,
+                'first_name': first_name,
+                'last_name': last_name,
+            }
+
+            # Generate email using first name and emp_id
+            email = f"{first_name.lower()}{row['Worker ID(optional)']}@automhr.com"
+
+            UserAccount.objects.update_or_create(
+                email=email,
+                defaults=user_data)
+
+        return Response({"status": "success"}, status=200)
+    except Exception as e:
+        return Response({"status": "error", "message": str(e)}, status=500)
