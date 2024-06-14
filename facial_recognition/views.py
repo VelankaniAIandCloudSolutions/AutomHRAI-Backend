@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from .utils import classify_face
 from accounts.models import UserAccount
 from celery.result import AsyncResult
+from django.utils import timezone
+from datetime import datetime, time
 # Create your views here.
 
 
@@ -1421,7 +1423,24 @@ def create_check_in_out(request):
 @permission_classes([])
 def calculate_daily_contract_worker_timesheet(request):
     try:
-        # Extract formData from request
+        velankani_company = Company.objects.get(name='Velankani')
+        cut_off_time = velankani_company.cut_off_time
+        # Get cut_off_time from velankani_company (assuming it's a datetime.time object)
+        # Get cut_off_time from velankani_company (assuming it's a datetime.time object)
+
+        print('cut_off_time from database:', cut_off_time)
+        # Get today's date
+        today_date = datetime.date.today()
+
+        # Combine today's date with cut_off_time to create a datetime object
+        cut_off_datetime = datetime.datetime.combine(today_date, cut_off_time)
+
+        # Assume the timezone of cut_off_datetime is UTC
+        cut_off_datetime_utc = cut_off_datetime.replace(tzinfo=pytz.utc)
+
+        print(cut_off_datetime_utc)
+
+        # Get today's date in the local timezone (adjust as necessary based on your logic)
         agency_id = request.data.get("agency")
         from_date_str = request.data.get("from_date")
         to_date_str = request.data.get("to_date")
@@ -1516,13 +1535,15 @@ def calculate_daily_contract_worker_timesheet(request):
 
                     # Filter check-ins, check-outs, break-ins, and break-outs after 6 PM
                     check_ins_after_6 = CheckInAndOut.objects.filter(
-                        user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                        user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+
+                    print('check in after 6', check_ins_after_6)
                     check_outs_after_6 = CheckInAndOut.objects.filter(
-                        user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                        user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=cut_off_time)
                     break_ins_after_6 = BreakInAndOut.objects.filter(
-                        user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                        user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=cut_off_time)
                     break_outs_after_6 = BreakInAndOut.objects.filter(
-                        user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=datetime.time(18, 0))
+                        user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=cut_off_time)
 
                     # Combine and sort events after 6 PM
                     events_after_6 = list(check_ins_after_6) + list(check_outs_after_6) + list(
@@ -1531,7 +1552,7 @@ def calculate_daily_contract_worker_timesheet(request):
 
                     # Calculate effective working time after 6 PM
                     extra_working_time = calculate_extra_shift_time(
-                        events_after_6)
+                        events_after_6,  cut_off_datetime_utc)
 
                     print('extra_working_time', extra_working_time)
 
@@ -1569,6 +1590,10 @@ def calculate_effective_working_time_new(check_ins, check_outs, break_ins, break
         total_working_time = timedelta(seconds=0)
         breaks_time = timedelta(seconds=0)
 
+        print(check_ins)
+        print(check_ins[0])
+        print(check_ins[0].created_at)
+
         check_in_out_pairs = list(zip(check_ins, check_outs))
 
         break_in_out_pairs = list(zip(break_ins, break_outs))
@@ -1588,7 +1613,7 @@ def calculate_effective_working_time_new(check_ins, check_outs, break_ins, break
         return 0
 
 
-def calculate_extra_shift_time(events_after_6):
+def calculate_extra_shift_time(events_after_6, cut_off_datetime_utc):
     try:
         # Calculate extra working time after 6 PM for a single day
 
@@ -1602,14 +1627,21 @@ def calculate_extra_shift_time(events_after_6):
         first_event = events_after_6[0]
         print('first_event', first_event)
         print(first_event.type)
-        print(first_event.created_at.time())
-        first_event.refresh_from_db()
+        print(first_event.created_at)
+        print(cut_off_datetime_utc)
+        modified_cut_off_time = cut_off_datetime_utc - \
+            datetime.timedelta(hours=5, minutes=30)
+        print('modified_cut_off_time', modified_cut_off_time)
+
+        print('first_event.created_At', first_event.created_at)
+        print('modified_cut_off_time', modified_cut_off_time)
 
         # If the first event is a checkout after 6 PM, calculate the time from 6 PM to this checkout
-        if first_event.type == 'checkout' and first_event.created_at.time() >= datetime.time(18, 0):
+        if first_event.type == 'checkout' and first_event.created_at.time() >= modified_cut_off_time.time():
             print('inside if')
-            total_working_time += (first_event.created_at - datetime.datetime.combine(
-                first_event.created_at.date(), datetime.time(18, 0)))
+
+            total_working_time += (first_event.created_at -
+                                   modified_cut_off_time)
             # Remove the first checkout event
             print('total_working_time inside if', total_working_time)
             events_after_6 = events_after_6[1:]
