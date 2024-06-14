@@ -29,7 +29,10 @@ urlpatterns = [
          views.parse_excel_contract_workers_creation),
     path('create-check-in-out/',
          views.create_check_in_out),
-    path('calculate-daily-contract-worker-timesheet/',
-         views.calculate_daily_contract_worker_timesheet)
+    path('calculate-daily-contract-worker-timesheet-date-wise/',
+         views.calculate_daily_contract_worker_timesheet),
+    path('calculate-cumulative-daily-contract-worker-timesheet-for-all-dates',
+         views.calculate_cumulative_contract_worker_timesheet)
+
 
 ]
