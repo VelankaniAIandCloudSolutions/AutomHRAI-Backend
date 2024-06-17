@@ -28,6 +28,9 @@ urlpatterns = [
     path('parse_excel_for_contract_workers_creation/',
          views.parse_excel_contract_workers_creation),
     path('create-check-in-out/',
-         views.create_check_in_out)
+         views.create_check_in_out),
+    path('create_attendance_billing/',views.create_attendance_billing),
+    path('get_all_attendance_billing/',views.get_all_attendance_billing),
+    path('update_attendance_billing_status/',views.update_attendance_billing_status),
 
 ]
