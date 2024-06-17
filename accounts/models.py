@@ -158,7 +158,8 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         Location, related_name='user_accounts', on_delete=models.SET_NULL, null=True, blank=True)
     sub_category = models.ForeignKey(
         SubCategory, related_name='user_accounts', on_delete=models.SET_NULL, null=True, blank=True)
-    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    hourly_rate = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True)
     objects = UserAccountManager()
 
     USERNAME_FIELD = 'email'

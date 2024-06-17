@@ -32,11 +32,12 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", 
+    "http://localhost:3000",
     "http://ai.automhr.com",
     "https://ai.automhr.com"
 ]
-CSRF_TRUSTED_ORIGINS = ['https://*.automhr.com','http://*.automhr.com','http://*.127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://*.automhr.com',
+                        'http://*.automhr.com', 'http://*.127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
@@ -60,7 +61,7 @@ INSTALLED_APPS = [
     'storages',
     'channels',
     'channels_redis'
-    
+
 ]
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
@@ -141,8 +142,8 @@ DATABASES = {
 #         'NAME': 'automhrai',
 #         'USER': 'automhrai_admin',
 #         'PASSWORD': 'Aic34062173',
-#         'HOST': 'automhrai.c6wmerccfdgz.ap-south-1.rds.amazonaws.com',   
-#         'PORT': '3306',       
+#         'HOST': 'automhrai.c6wmerccfdgz.ap-south-1.rds.amazonaws.com',
+#         'PORT': '3306',
 #     }
 # }
 
@@ -172,11 +173,12 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Kolkata'
 
+USE_TZ = True
+
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
@@ -205,7 +207,7 @@ CELERY_RESULT_BACKEND = 'django-db'
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',  
+        'LOCATION': 'redis://127.0.0.1:6379/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
@@ -219,7 +221,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('127.0.0.1', 6379)],  
+            'hosts': [('127.0.0.1', 6379)],
         },
     },
 }
