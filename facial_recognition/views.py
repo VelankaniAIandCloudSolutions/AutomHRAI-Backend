@@ -436,7 +436,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -1465,20 +1465,19 @@ def create_check_in_out(request):
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])
-
 def get_all_attendance_billing(request):
     try:
         attendance_billing = AttendanceBilling.objects.all()
-        serializer = ContractWorkerBillApprovalSerializer(attendance_billing, many=True)
+        serializer = ContractWorkerBillApprovalSerializer(
+            attendance_billing, many=True)
         return Response(serializer.data, status=200)
     except Exception as e:
         return Response({'message': str(e)}, status=500)
-    
+
 
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
-
 def create_attendance_billing(request):
     try:
         user = UserAccount.objects.get(email=request.data['email'])
@@ -1521,8 +1520,7 @@ def create_attendance_billing(request):
         return Response({'message': 'User not found'}, status=404)
     except Exception as e:
         return Response({'message': str(e)}, status=500)
-    
-  
+
 
 @api_view(['PUT'])
 def update_attendance_billing_status(request):
@@ -1621,6 +1619,7 @@ def calculate_cumulative_contract_worker_timesheet(request):
                 try:
                     whole_day_check_ins = CheckInAndOut.objects.filter(
                         user=worker, type='checkin', created_at__date=current_date)
+                    print(whole_day_check_ins)
                     whole_day_check_outs = CheckInAndOut.objects.filter(
                         user=worker, type='checkout', created_at__date=current_date)
                     whole_day_break_ins = BreakInAndOut.objects.filter(
@@ -1649,9 +1648,9 @@ def calculate_cumulative_contract_worker_timesheet(request):
                         events_after_cutoff_time, cut_off_time)
 
                     # Update total values
-                    total_normal_shift_hours += Decimal(
-                        effective_working_time_whole_day)
                     total_extra_shift_hours += Decimal(extra_working_time)
+                    total_normal_shift_hours += Decimal(
+                        effective_working_time_whole_day)-total_extra_shift_hours
                 except ValueError:
                     pass
 
@@ -2077,7 +2076,8 @@ def calculate_daily_contract_worker_timesheet(request, worker_id):
                 status = "Present" if whole_day_check_ins.exists(
                 ) or check_ins_after_cutoff_time.exists() else "Absent"
                 working_bill = hourly_rate * \
-                    Decimal(effective_working_time_whole_day)
+                    (Decimal(effective_working_time_whole_day) -
+                     Decimal(extra_shift_working_time))
                 extra_bill = hourly_rate * \
                     Decimal(extra_shift_working_time)
                 total_bill = working_bill + extra_bill
@@ -2092,7 +2092,7 @@ def calculate_daily_contract_worker_timesheet(request, worker_id):
                     "hourly_rate": hourly_rate,
                     "date": current_date.strftime("%Y-%m-%d"),
                     "status": status,
-                    "normal_shift_hours": effective_working_time_whole_day,
+                    "normal_shift_hours": effective_working_time_whole_day-extra_shift_working_time,
                     "extra_shift_hours": extra_shift_working_time,
                     "total_hours": total_hours,
                     "working_bill": float(working_bill),
@@ -2135,6 +2135,9 @@ def calculate_effective_working_time_new(check_ins, check_outs, break_ins, break
         for break_in, break_out in break_in_out_pairs:
             if break_in.created_at < break_out.created_at:
                 breaks_time += (break_out.created_at - break_in.created_at)
+
+        print('sasasasas', total_working_time)
+        print(breaks_time)
 
         effective_working_time = total_working_time - breaks_time
         return effective_working_time.total_seconds()/3600
