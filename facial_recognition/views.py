@@ -1462,6 +1462,96 @@ def create_check_in_out(request):
             return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+
+def get_all_attendance_billing(request):
+    try:
+        attendance_billing = AttendanceBilling.objects.all()
+        serializer = ContractWorkerBillApprovalSerializer(attendance_billing, many=True)
+        return Response(serializer.data, status=200)
+    except Exception as e:
+        return Response({'message': str(e)}, status=500)
+    
+
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([])
+
+def create_attendance_billing(request):
+    try:
+        user = UserAccount.objects.get(email=request.data['email'])
+        date = request.data['date']
+        hourly_rate = request.data['hourly_rate']
+        working_hours = request.data['working_hours']
+        extra_hours = request.data['extra_hours']
+        working_bill_amount = request.data['working_bill_amount']
+        extra_bill_amount = request.data['extra_bill_amount']
+        total_hours = request.data['total_hours']
+        total_bill_amount = request.data['total_bill_amount']
+        action = request.data['action']
+
+        status = None
+        if action == 'approve':
+            status = AttendanceBilling.APPROVED
+        elif action == 'reject':
+            status = AttendanceBilling.REJECTED
+        elif action == 'pending':
+            status = AttendanceBilling.PENDING
+
+        if status is not None:
+            AttendanceBilling.objects.create(
+                user=user,
+                date=date,
+                hourly_rate=hourly_rate,
+                working_hours=working_hours,
+                extra_hours=extra_hours,
+                working_bill_amount=working_bill_amount,
+                extra_bill_amount=extra_bill_amount,
+                total_hours=total_hours,
+                total_bill_amount=total_bill_amount,
+                status=status
+            )
+            return Response({'message': 'Attendance billing created successfully'}, status=201)
+        else:
+            return Response({'message': 'Invalid action'}, status=400)
+
+    except UserAccount.DoesNotExist:
+        return Response({'message': 'User not found'}, status=404)
+    except Exception as e:
+        return Response({'message': str(e)}, status=500)
+    
+  
+
+@api_view(['PUT'])
+def update_attendance_billing_status(request):
+    try:
+        selected_rows = request.data.get('selected_rows', [])
+        action = request.data.get('action')
+
+        if action not in [AttendanceBilling.PENDING, AttendanceBilling.APPROVED, AttendanceBilling.REJECTED]:
+            return Response({'message': 'Invalid action'}, status=400)
+
+        updated_rows = []
+        for row in selected_rows:
+            try:
+                billing = AttendanceBilling.objects.get(id=row['id'])
+                billing.status = action
+                billing.save()
+                updated_rows.append(billing.id)
+            except AttendanceBilling.DoesNotExist:
+                continue
+
+        if updated_rows:
+            return Response({'message': 'Status updated successfully', 'updated_rows': updated_rows}, status=200)
+        else:
+            return Response({'message': 'No records updated'}, status=400)
+
+    except Exception as e:
+        return Response({'message': str(e)}, status=500)
+
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])

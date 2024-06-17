@@ -87,3 +87,9 @@ class CheckBreakSerializer(serializers.ModelSerializer):
         elif isinstance(instance, BreakInAndOut):
             return BreakInAndOutSerializer(instance).data
         return super().to_representation(instance)
+
+class ContractWorkerBillApprovalSerializer(serializers.ModelSerializer):
+    user= UserAccountSerializer()
+    class Meta:
+        model = AttendanceBilling
+        fields = "__all__"
