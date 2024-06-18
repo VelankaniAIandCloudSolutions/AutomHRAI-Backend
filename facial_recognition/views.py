@@ -1697,6 +1697,7 @@ def update_attendance_billing_status(request):
 #     except Exception as e:
 #         return Response({"error": str(e)}, status=400)
 
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
