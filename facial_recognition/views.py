@@ -17,6 +17,7 @@ from celery.result import AsyncResult
 from django.utils import timezone
 from datetime import datetime, timedelta
 
+
 # Create your views here.
 
 
@@ -1481,26 +1482,17 @@ def get_all_attendance_billing(request):
 
 def create_attendance_billing(request):
     try:
-        user = UserAccount.objects.get(email=request.data['email'])
-        date = request.data['date']
-        hourly_rate = request.data['hourly_rate']
-        working_hours = request.data['working_hours']
-        extra_hours = request.data['extra_hours']
-        working_bill_amount = request.data['working_bill_amount']
-        extra_bill_amount = request.data['extra_bill_amount']
-        total_hours = request.data['total_hours']
-        total_bill_amount = request.data['total_bill_amount']
-        action = request.data['action']
+        for data in request.data:
+            user = UserAccount.objects.get(id=data['worker_id'])
+            date = datetime.datetime.now().date()
+            hourly_rate = data['hourly_rate']
+            working_hours = data['total_normal_shift_hours']
+            extra_hours = data['total_extra_shift_hours']
+            working_bill_amount = data['total_working_bill']
+            extra_bill_amount = data['total_extra_bill']
+            total_hours = data['total_hours']
+            total_bill_amount = data['total_bill']
 
-        status = None
-        if action == 'approve':
-            status = AttendanceBilling.APPROVED
-        elif action == 'reject':
-            status = AttendanceBilling.REJECTED
-        elif action == 'pending':
-            status = AttendanceBilling.PENDING
-
-        if status is not None:
             AttendanceBilling.objects.create(
                 user=user,
                 date=date,
@@ -1511,17 +1503,14 @@ def create_attendance_billing(request):
                 extra_bill_amount=extra_bill_amount,
                 total_hours=total_hours,
                 total_bill_amount=total_bill_amount,
-                status=status
             )
-            return Response({'message': 'Attendance billing created successfully'}, status=201)
-        else:
-            return Response({'message': 'Invalid action'}, status=400)
+
+        return Response({'message': 'Attendance billing created successfully'}, status=201)
 
     except UserAccount.DoesNotExist:
         return Response({'message': 'User not found'}, status=404)
     except Exception as e:
         return Response({'message': str(e)}, status=500)
-    
   
 
 @api_view(['PUT'])
