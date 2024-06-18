@@ -437,7 +437,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -1540,6 +1540,163 @@ def update_attendance_billing_status(request):
         return Response({'message': str(e)}, status=500)
 
 
+# @api_view(['POST'])
+# @authentication_classes([])
+# @permission_classes([])
+# def calculate_cumulative_contract_worker_timesheet(request):
+#     try:
+#         velankani_company = Company.objects.get(name='Velankani')
+#         cut_off_time = velankani_company.cut_off_time
+#         print('cut_off_time from database:', cut_off_time)
+
+#         agency_id = request.data.get("agency")
+#         from_date_str = request.data.get("fromDate")
+#         to_date_str = request.data.get("toDate")
+#         worker_ids = request.data.get("workers")
+
+#         # Validate date inputs
+#         try:
+#             from_date = datetime.datetime.strptime(
+#                 from_date_str, "%Y-%m-%d").date()
+#             to_date = datetime.datetime.strptime(
+#                 to_date_str, "%Y-%m-%d").date()
+#         except ValueError:
+#             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+#         if from_date > to_date:
+#             return Response({"error": "Invalid date range. 'From' date should be before 'To' date."}, status=400)
+
+#         # Get workers based on the provided IDs and conditions
+#         if worker_ids == ["All_Workers"]:
+#             if agency_id:
+#                 # If "All_Workers" is selected along with a specific agency
+#                 workers = UserAccount.objects.filter(
+#                     agency_id=agency_id, is_contract_worker=True)
+#             else:
+#                 # If "All_Workers" is selected without any specific agency
+#                 workers = UserAccount.objects.filter(is_contract_worker=True)
+#         else:
+#             if agency_id and worker_ids:
+#                 # If specific worker IDs are selected along with a specific agency
+#                 workers = UserAccount.objects.filter(
+#                     id__in=worker_ids, agency_id=agency_id, is_contract_worker=True)
+#             elif agency_id:
+#                 # If only a specific agency is selected
+#                 workers = UserAccount.objects.filter(
+#                     agency_id=agency_id, is_contract_worker=True)
+#             elif worker_ids:
+#                 # If only specific worker IDs are selected
+#                 workers = UserAccount.objects.filter(
+#                     id__in=worker_ids, is_contract_worker=True)
+#             else:
+#                 # If no specific agency or worker IDs are provided
+#                 workers = UserAccount.objects.filter(is_contract_worker=True)
+
+#         # List to store cumulative timesheet data for each contract worker
+#         cumulative_timesheet_data = []
+
+#         # Iterate through each worker
+
+#         for worker in workers:
+#             worker_id = worker.id
+#             agency_name = worker.agency.name if worker.agency else None
+#             subcategory_name = worker.sub_category.name if worker.sub_category else None
+#             hourly_rate = worker.hourly_rate if worker.hourly_rate else Decimal(
+#                 '0.0')
+
+#             full_name = worker.first_name
+#             if worker.last_name:
+#                 full_name += " " + worker.last_name
+
+#             # Initialize total values
+#             total_normal_shift_hours = Decimal(0)
+#             total_extra_shift_hours = Decimal(0)
+#             total_hours = Decimal(0)
+#             total_working_bill = Decimal(0)
+#             total_extra_bill = Decimal(0)
+
+#             current_date = from_date
+#             print('current worker', worker_id)
+#             while current_date <= to_date:
+#                 print('Processing date:', current_date)
+#                 try:
+#                     print('for user', worker_id)
+#                     whole_day_check_ins = CheckInAndOut.objects.filter(
+#                         user=worker, type='checkin', created_at__date=current_date)
+#                     print('whole day check-ins', whole_day_check_ins)
+#                     whole_day_check_outs = CheckInAndOut.objects.filter(
+#                         user=worker, type='checkout', created_at__date=current_date)
+#                     print('whole day check-outs', whole_day_check_ins)
+#                     whole_day_break_ins = BreakInAndOut.objects.filter(
+#                         user=worker, type='breakin', created_at__date=current_date)
+#                     print('whole day break-ins', whole_day_break_ins)
+#                     whole_day_break_outs = BreakInAndOut.objects.filter(
+#                         user=worker, type='breakout', created_at__date=current_date)
+#                     print('whole day break-outs', whole_day_break_outs)
+
+#                     effective_working_time_whole_day = calculate_effective_working_time_new(
+#                         whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs)
+#                     print('effective working time whole day',
+#                           effective_working_time_whole_day)
+
+#                     check_ins_after_cutoff_time = CheckInAndOut.objects.filter(
+#                         user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+#                     check_outs_after_cutoff_time = CheckInAndOut.objects.filter(
+#                         user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+#                     break_ins_after_cutoff_time = BreakInAndOut.objects.filter(
+#                         user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+#                     break_outs_after_cutoff_time = BreakInAndOut.objects.filter(
+#                         user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+
+#                     events_after_cutoff_time = list(check_ins_after_cutoff_time) + list(check_outs_after_cutoff_time) + list(
+#                         break_ins_after_cutoff_time) + list(break_outs_after_cutoff_time)
+#                     events_after_cutoff_time.sort(
+#                         key=lambda event: event.created_at)
+
+#                     extra_working_time = calculate_extra_shift_time(
+#                         events_after_cutoff_time, cut_off_time)
+#                     print('extra working time', extra_working_time)
+#                     # Update total values
+#                     total_extra_shift_hours += Decimal(extra_working_time)
+#                     print('total extra shift hours',
+#                           total_extra_shift_hours)
+#                     total_normal_shift_hours += Decimal(
+#                         effective_working_time_whole_day)-total_extra_shift_hours
+#                     print('total normal shift hours',
+#                           total_normal_shift_hours)
+#                 except ValueError:
+#                     pass
+
+#                 current_date += datetime.timedelta(days=1)
+
+#             total_working_bill = hourly_rate * total_normal_shift_hours
+#             total_extra_bill = hourly_rate * total_extra_shift_hours
+#             total_bill = total_working_bill + total_extra_bill
+#             total_hours = total_normal_shift_hours+total_extra_shift_hours
+
+#             contract_worker_data = {
+#                 "worker_id": worker_id,
+#                 "contract_worker_name": full_name,
+#                 "agency": agency_name,
+#                 "subcategory": subcategory_name,
+#                 # Ensure it's serialized correctly
+#                 "hourly_rate": float(hourly_rate),
+#                 "total_normal_shift_hours": float(total_normal_shift_hours),
+#                 "total_extra_shift_hours": float(total_extra_shift_hours),
+#                 "total_hours": float(total_hours),
+#                 "total_working_bill": float(total_working_bill),
+#                 "total_extra_bill": float(total_extra_bill),
+#                 "total_bill": float(total_bill)
+#             }
+#             print(contract_worker_data)
+
+#             cumulative_timesheet_data.append(contract_worker_data)
+
+#         return Response(cumulative_timesheet_data)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=400)
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
@@ -1568,7 +1725,11 @@ def calculate_cumulative_contract_worker_timesheet(request):
 
         # Get workers based on the provided IDs and conditions
         if worker_ids == ["All_Workers"]:
-            workers = UserAccount.objects.filter(is_contract_worker=True)
+            if agency_id:
+                workers = UserAccount.objects.filter(
+                    agency_id=agency_id, is_contract_worker=True)
+            else:
+                workers = UserAccount.objects.filter(is_contract_worker=True)
         else:
             if agency_id and worker_ids:
                 workers = UserAccount.objects.filter(
@@ -1582,10 +1743,8 @@ def calculate_cumulative_contract_worker_timesheet(request):
             else:
                 workers = UserAccount.objects.filter(is_contract_worker=True)
 
-        # List to store cumulative timesheet data for each contract worker
         cumulative_timesheet_data = []
 
-        # Iterate through each worker
         for worker in workers:
             worker_id = worker.id
             agency_name = worker.agency.name if worker.agency else None
@@ -1597,7 +1756,6 @@ def calculate_cumulative_contract_worker_timesheet(request):
             if worker.last_name:
                 full_name += " " + worker.last_name
 
-            # Initialize total values
             total_normal_shift_hours = Decimal(0)
             total_extra_shift_hours = Decimal(0)
             total_hours = Decimal(0)
@@ -1605,11 +1763,12 @@ def calculate_cumulative_contract_worker_timesheet(request):
             total_extra_bill = Decimal(0)
 
             current_date = from_date
+            print('current worker', worker_id)
             while current_date <= to_date:
+                print('Processing date:', current_date)
                 try:
                     whole_day_check_ins = CheckInAndOut.objects.filter(
                         user=worker, type='checkin', created_at__date=current_date)
-                    print(whole_day_check_ins)
                     whole_day_check_outs = CheckInAndOut.objects.filter(
                         user=worker, type='checkout', created_at__date=current_date)
                     whole_day_break_ins = BreakInAndOut.objects.filter(
@@ -1617,30 +1776,38 @@ def calculate_cumulative_contract_worker_timesheet(request):
                     whole_day_break_outs = BreakInAndOut.objects.filter(
                         user=worker, type='breakout', created_at__date=current_date)
 
-                    effective_working_time_whole_day = calculate_effective_working_time_new(
-                        whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs)
+                    if whole_day_check_ins or whole_day_check_outs or whole_day_break_ins or whole_day_break_outs:
+                        effective_working_time_whole_day = calculate_effective_working_time_new(
+                            whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs)
+                        print('effective working time whole day:',
+                              effective_working_time_whole_day)
 
-                    check_ins_after_cutoff_time = CheckInAndOut.objects.filter(
-                        user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=cut_off_time)
-                    check_outs_after_cutoff_time = CheckInAndOut.objects.filter(
-                        user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=cut_off_time)
-                    break_ins_after_cutoff_time = BreakInAndOut.objects.filter(
-                        user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=cut_off_time)
-                    break_outs_after_cutoff_time = BreakInAndOut.objects.filter(
-                        user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+                        check_ins_after_cutoff_time = CheckInAndOut.objects.filter(
+                            user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+                        check_outs_after_cutoff_time = CheckInAndOut.objects.filter(
+                            user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+                        break_ins_after_cutoff_time = BreakInAndOut.objects.filter(
+                            user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+                        break_outs_after_cutoff_time = BreakInAndOut.objects.filter(
+                            user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=cut_off_time)
 
-                    events_after_cutoff_time = list(check_ins_after_cutoff_time) + list(check_outs_after_cutoff_time) + list(
-                        break_ins_after_cutoff_time) + list(break_outs_after_cutoff_time)
-                    events_after_cutoff_time.sort(
-                        key=lambda event: event.created_at)
+                        events_after_cutoff_time = list(check_ins_after_cutoff_time) + list(check_outs_after_cutoff_time) + list(
+                            break_ins_after_cutoff_time) + list(break_outs_after_cutoff_time)
+                        events_after_cutoff_time.sort(
+                            key=lambda event: event.created_at)
 
-                    extra_working_time = calculate_extra_shift_time(
-                        events_after_cutoff_time, cut_off_time)
+                        extra_working_time = calculate_extra_shift_time(
+                            events_after_cutoff_time, cut_off_time)
+                        print('extra working time:', extra_working_time)
 
-                    # Update total values
-                    total_extra_shift_hours += Decimal(extra_working_time)
-                    total_normal_shift_hours += Decimal(
-                        effective_working_time_whole_day)-total_extra_shift_hours
+                        total_extra_shift_hours += Decimal(extra_working_time)
+                        total_normal_shift_hours += Decimal(
+                            effective_working_time_whole_day) - Decimal(extra_working_time)
+
+                        print('total extra shift hours:',
+                              total_extra_shift_hours)
+                        print('total normal shift hours:',
+                              total_normal_shift_hours)
                 except ValueError:
                     pass
 
@@ -1649,14 +1816,13 @@ def calculate_cumulative_contract_worker_timesheet(request):
             total_working_bill = hourly_rate * total_normal_shift_hours
             total_extra_bill = hourly_rate * total_extra_shift_hours
             total_bill = total_working_bill + total_extra_bill
-            total_hours = total_normal_shift_hours+total_extra_shift_hours
+            total_hours = total_normal_shift_hours + total_extra_shift_hours
 
             contract_worker_data = {
                 "worker_id": worker_id,
                 "contract_worker_name": full_name,
                 "agency": agency_name,
                 "subcategory": subcategory_name,
-                # Ensure it's serialized correctly
                 "hourly_rate": float(hourly_rate),
                 "total_normal_shift_hours": float(total_normal_shift_hours),
                 "total_extra_shift_hours": float(total_extra_shift_hours),
@@ -1665,6 +1831,7 @@ def calculate_cumulative_contract_worker_timesheet(request):
                 "total_extra_bill": float(total_extra_bill),
                 "total_bill": float(total_bill)
             }
+            print(contract_worker_data)
 
             cumulative_timesheet_data.append(contract_worker_data)
 
@@ -2126,7 +2293,7 @@ def calculate_effective_working_time_new(check_ins, check_outs, break_ins, break
             if break_in.created_at < break_out.created_at:
                 breaks_time += (break_out.created_at - break_in.created_at)
 
-        print('sasasasas', total_working_time)
+        print('total working time', total_working_time)
         print(breaks_time)
 
         effective_working_time = total_working_time - breaks_time
@@ -2147,12 +2314,12 @@ def calculate_extra_shift_time(events_after_cutoff_time, cut_off_time):
             return 0
 
         first_event = events_after_cutoff_time[0]
-        print('first_event', first_event)
-        print(first_event.type)
-        print(first_event.created_at)
-        print(cut_off_time)
+        # print('first_event', first_event)
+        # print(first_event.type)
+        # print(first_event.created_at)
+        # print(cut_off_time)
         event_date = first_event.created_at.date()
-        print(event_date)
+        # print(event_date)
 
         # Combine event_date with cut_off_time to create a datetime.datetime object
         cut_off_datetime = datetime.datetime.combine(event_date, cut_off_time)
@@ -2165,7 +2332,7 @@ def calculate_extra_shift_time(events_after_cutoff_time, cut_off_time):
         timezone_info = first_event.created_at.tzinfo
         modified_cut_off_datetime = modified_cut_off_datetime_naive.replace(
             tzinfo=timezone_info)
-        print('sasasas', modified_cut_off_datetime)
+        # print('sasasas', modified_cut_off_datetime)
         # modified_cut_off_time = cut_off_datetime_utc - \
         #     datetime.timedelta(hours=5, minutes=30)
         # print('modified_cut_off_time', modified_cut_off_time)
