@@ -225,3 +225,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+FACIAL_RECOGNITION_SERVER_HOST = 'https://fr.automhr.com/'
