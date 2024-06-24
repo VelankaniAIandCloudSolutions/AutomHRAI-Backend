@@ -437,7 +437,7 @@ def get_timesheet_data(request, user_id):
         serialized_data.append(serialized_entry)
 
     # Return only unique dates
-    serialized_data = {entry['date']                       : entry for entry in serialized_data}.values()
+    serialized_data = {entry['date']: entry for entry in serialized_data}.values()
 
     return Response(serialized_data)
 
@@ -2139,61 +2139,178 @@ def calculate_cumulative_contract_worker_timesheet(request):
 #         return Response({"error": str(e)}, status=400)
 
 
+# @api_view(['POST'])
+# @authentication_classes([])
+# @permission_classes([])
+# def calculate_daily_contract_worker_timesheet(request, worker_id):
+#     try:
+#         print('sasasasa')
+#         velankani_company = Company.objects.get(name='Velankani')
+#         cut_off_time = velankani_company.cut_off_time
+
+#         # agency_id = request.data.get("agency")
+#         # Retrieve fromDate and toDate from request.data
+
+#         from_date_str = request.data.get("fromDate")
+
+#         print('form_Date_str comign fro mfrotn end', from_date_str)
+#         to_date_str = request.data.get("toDate")
+
+#         print('to_Date_str comign fro mfrotn end', to_date_str)
+
+#         # worker_id = request.data.get("worker")
+#         if not from_date_str or not to_date_str:
+#             return Response({"error": "fromDate and toDate are required fields."}, status=400)
+
+#         # Validate date inputs
+#         try:
+#             # from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
+#             # to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
+#             from_date = datetime.datetime.strptime(
+#                 from_date_str, "%Y-%m-%d").date()
+
+#             print('from_Date', from_date)
+#             to_date = datetime.datetime.strptime(
+#                 to_date_str, "%Y-%m-%d").date()
+#             print('to_date', to_date)
+
+#         except ValueError:
+#             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+#         if from_date > to_date:
+#             return Response({"error": "Invalid date range. 'From' date should be before 'To' date."}, status=400)
+
+#         # Get the worker based on the provided ID and conditions
+#         try:
+#             worker = UserAccount.objects.get(
+#                 id=worker_id, is_contract_worker=True)
+#         except UserAccount.DoesNotExist:
+#             return Response({"error": "Worker not found or not a contract worker."}, status=404)
+
+#         agency_name = worker.agency.name if worker.agency else None
+#         subcategory_name = worker.sub_category.name if worker.sub_category else None
+#         hourly_rate = worker.hourly_rate if worker.hourly_rate else None
+
+#         full_name = worker.first_name
+#         if worker.last_name:
+#             full_name += " " + worker.last_name
+
+#         # List to store timesheet data for the contract worker
+#         timesheet_data = []
+
+#         # Iterate through each day within the date range
+#         current_date = from_date
+#         while current_date <= to_date:
+#             try:
+#                 whole_day_check_ins = CheckInAndOut.objects.filter(
+#                     user=worker, type='checkin', created_at__date=current_date)
+#                 whole_day_check_outs = CheckInAndOut.objects.filter(
+#                     user=worker, type='checkout', created_at__date=current_date)
+#                 whole_day_break_ins = BreakInAndOut.objects.filter(
+#                     user=worker, type='breakin', created_at__date=current_date)
+#                 whole_day_break_outs = BreakInAndOut.objects.filter(
+#                     user=worker, type='breakout', created_at__date=current_date)
+
+#                 effective_working_time_whole_day = calculate_effective_working_time_new(
+#                     whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs)
+
+#                 check_ins_after_cutoff_time = CheckInAndOut.objects.filter(
+#                     user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+#                 check_outs_after_cutoff_time = CheckInAndOut.objects.filter(
+#                     user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+#                 break_ins_after_cutoff_time = BreakInAndOut.objects.filter(
+#                     user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+#                 break_outs_after_cutoff_time = BreakInAndOut.objects.filter(
+#                     user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+
+#                 events_after_cutoff_time = list(check_ins_after_cutoff_time) + list(check_outs_after_cutoff_time) + list(
+#                     break_ins_after_cutoff_time) + list(break_outs_after_cutoff_time)
+#                 events_after_cutoff_time.sort(
+#                     key=lambda event: event.created_at)
+
+#                 extra_shift_working_time = calculate_extra_shift_time(
+#                     events_after_cutoff_time, cut_off_time)
+
+#                 status = "Present" if whole_day_check_ins.exists(
+#                 ) or check_ins_after_cutoff_time.exists() else "Absent"
+#                 working_bill = hourly_rate * \
+#                     (Decimal(effective_working_time_whole_day) -
+#                      Decimal(extra_shift_working_time))
+#                 extra_bill = hourly_rate * \
+#                     Decimal(extra_shift_working_time)
+#                 total_bill = working_bill + extra_bill
+#                 total_hours = effective_working_time_whole_day+extra_shift_working_time
+
+#                 # Store daily timesheet data
+#                 daily_timesheet_entry = {
+#                     "contract_worker_name": full_name,
+#                     "worker_id": worker_id,
+#                     "agency": agency_name,
+#                     "subcategory": subcategory_name,
+#                     "hourly_rate": hourly_rate,
+#                     "date": current_date.strftime("%Y-%m-%d"),
+#                     "status": status,
+#                     "normal_shift_hours": effective_working_time_whole_day-extra_shift_working_time,
+#                     "extra_shift_hours": extra_shift_working_time,
+#                     "total_hours": total_hours,
+#                     "working_bill": float(working_bill),
+#                     "extra_bill": float(extra_bill),
+#                     "total_bill": float(total_bill)
+#                 }
+
+#                 timesheet_data.append(daily_timesheet_entry)
+
+#             except ValueError:
+#                 pass
+
+#             current_date += timedelta(days=1)
+
+#         return Response(timesheet_data)
+
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=400)
+
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([])
 def calculate_daily_contract_worker_timesheet(request, worker_id):
     try:
-        print('sasasasa')
+        # Fetch cut-off time from company settings (assuming 'Velankani' company)
         velankani_company = Company.objects.get(name='Velankani')
         cut_off_time = velankani_company.cut_off_time
 
-        # agency_id = request.data.get("agency")
         # Retrieve fromDate and toDate from request.data
-
         from_date_str = request.data.get("fromDate")
-
-        print('form_Date_str comign fro mfrotn end', from_date_str)
         to_date_str = request.data.get("toDate")
 
-        print('to_Date_str comign fro mfrotn end', to_date_str)
-
-        # worker_id = request.data.get("worker")
+        # Validate fromDate and toDate
         if not from_date_str or not to_date_str:
             return Response({"error": "fromDate and toDate are required fields."}, status=400)
 
-        # Validate date inputs
         try:
-            # from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
-            # to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
             from_date = datetime.datetime.strptime(
                 from_date_str, "%Y-%m-%d").date()
-
-            print('from_Date', from_date)
             to_date = datetime.datetime.strptime(
                 to_date_str, "%Y-%m-%d").date()
-            print('to_date', to_date)
-
         except ValueError:
             return Response({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
 
         if from_date > to_date:
             return Response({"error": "Invalid date range. 'From' date should be before 'To' date."}, status=400)
 
-        # Get the worker based on the provided ID and conditions
+        # Get the contract worker based on worker_id
         try:
             worker = UserAccount.objects.get(
                 id=worker_id, is_contract_worker=True)
         except UserAccount.DoesNotExist:
             return Response({"error": "Worker not found or not a contract worker."}, status=404)
 
+        # Retrieve worker details
         agency_name = worker.agency.name if worker.agency else None
         subcategory_name = worker.sub_category.name if worker.sub_category else None
         hourly_rate = worker.hourly_rate if worker.hourly_rate else None
 
-        full_name = worker.first_name
-        if worker.last_name:
-            full_name += " " + worker.last_name
+        full_name = worker.get_full_name()
 
         # List to store timesheet data for the contract worker
         timesheet_data = []
@@ -2202,55 +2319,87 @@ def calculate_daily_contract_worker_timesheet(request, worker_id):
         current_date = from_date
         while current_date <= to_date:
             try:
+                # Fetch check-ins and check-outs for the day
                 whole_day_check_ins = CheckInAndOut.objects.filter(
-                    user=worker, type='checkin', created_at__date=current_date)
+                    user=worker, type='checkin', created_at__date=current_date
+                )
                 whole_day_check_outs = CheckInAndOut.objects.filter(
-                    user=worker, type='checkout', created_at__date=current_date)
+                    user=worker, type='checkout', created_at__date=current_date
+                )
+
+                # Fetch break-ins and break-outs for the day
                 whole_day_break_ins = BreakInAndOut.objects.filter(
-                    user=worker, type='breakin', created_at__date=current_date)
+                    user=worker, type='breakin', created_at__date=current_date
+                )
                 whole_day_break_outs = BreakInAndOut.objects.filter(
-                    user=worker, type='breakout', created_at__date=current_date)
+                    user=worker, type='breakout', created_at__date=current_date
+                )
 
+                # Calculate effective working time for the whole day
                 effective_working_time_whole_day = calculate_effective_working_time_new(
-                    whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs)
+                    whole_day_check_ins, whole_day_check_outs, whole_day_break_ins, whole_day_break_outs
+                )
 
+                # Fetch check-ins and check-outs after cut-off time
                 check_ins_after_cutoff_time = CheckInAndOut.objects.filter(
-                    user=worker, type='checkin', created_at__date=current_date, created_at__time__gte=cut_off_time)
+                    Q(user=worker, type='checkin') & Q(created_at__date=current_date) & Q(
+                        created_at__time__gte=cut_off_time)
+                )
                 check_outs_after_cutoff_time = CheckInAndOut.objects.filter(
-                    user=worker, type='checkout', created_at__date=current_date, created_at__time__gte=cut_off_time)
-                break_ins_after_cutoff_time = BreakInAndOut.objects.filter(
-                    user=worker, type='breakin', created_at__date=current_date, created_at__time__gte=cut_off_time)
-                break_outs_after_cutoff_time = BreakInAndOut.objects.filter(
-                    user=worker, type='breakout', created_at__date=current_date, created_at__time__gte=cut_off_time)
+                    Q(user=worker, type='checkout') & Q(created_at__date=current_date) & Q(
+                        created_at__time__gte=cut_off_time)
+                )
 
+                # Fetch break-ins and break-outs after cut-off time
+                break_ins_after_cutoff_time = BreakInAndOut.objects.filter(
+                    Q(user=worker, type='breakin') & Q(created_at__date=current_date) & Q(
+                        created_at__time__gte=cut_off_time)
+                )
+                break_outs_after_cutoff_time = BreakInAndOut.objects.filter(
+                    Q(user=worker, type='breakout') & Q(created_at__date=current_date) & Q(
+                        created_at__time__gte=cut_off_time)
+                )
+
+                # Combine all events after cut-off time and sort by timestamp
                 events_after_cutoff_time = list(check_ins_after_cutoff_time) + list(check_outs_after_cutoff_time) + list(
                     break_ins_after_cutoff_time) + list(break_outs_after_cutoff_time)
                 events_after_cutoff_time.sort(
                     key=lambda event: event.created_at)
 
+                # Calculate extra shift working time after cut-off time
                 extra_shift_working_time = calculate_extra_shift_time(
-                    events_after_cutoff_time, cut_off_time)
+                    events_after_cutoff_time, cut_off_time
+                )
 
+                # Determine worker status for the day (Present or Absent)
                 status = "Present" if whole_day_check_ins.exists(
                 ) or check_ins_after_cutoff_time.exists() else "Absent"
-                working_bill = hourly_rate * \
-                    (Decimal(effective_working_time_whole_day) -
-                     Decimal(extra_shift_working_time))
-                extra_bill = hourly_rate * \
-                    Decimal(extra_shift_working_time)
-                total_bill = working_bill + extra_bill
-                total_hours = effective_working_time_whole_day+extra_shift_working_time
 
-                # Store daily timesheet data
+                # Calculate billable amounts if hourly_rate is available
+                if hourly_rate is not None:
+                    working_bill = hourly_rate * \
+                        (Decimal(effective_working_time_whole_day) -
+                         Decimal(extra_shift_working_time))
+                    extra_bill = hourly_rate * \
+                        Decimal(extra_shift_working_time)
+                    total_bill = working_bill + extra_bill
+                else:
+                    working_bill = Decimal(0)
+                    extra_bill = Decimal(0)
+                    total_bill = Decimal(0)
+
+                total_hours = effective_working_time_whole_day + extra_shift_working_time
+
+                # Create daily timesheet entry
                 daily_timesheet_entry = {
                     "contract_worker_name": full_name,
                     "worker_id": worker_id,
                     "agency": agency_name,
                     "subcategory": subcategory_name,
-                    "hourly_rate": hourly_rate,
+                    "hourly_rate": float(hourly_rate) if hourly_rate is not None else None,
                     "date": current_date.strftime("%Y-%m-%d"),
                     "status": status,
-                    "normal_shift_hours": effective_working_time_whole_day-extra_shift_working_time,
+                    "normal_shift_hours": effective_working_time_whole_day - extra_shift_working_time,
                     "extra_shift_hours": extra_shift_working_time,
                     "total_hours": total_hours,
                     "working_bill": float(working_bill),
@@ -2260,8 +2409,8 @@ def calculate_daily_contract_worker_timesheet(request, worker_id):
 
                 timesheet_data.append(daily_timesheet_entry)
 
-            except ValueError:
-                pass
+            except Exception as e:
+                return Response({"error": str(e)}, status=400)
 
             current_date += timedelta(days=1)
 
